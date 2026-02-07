@@ -49,6 +49,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  */
 public class RobotContainer
 {
+   public static final PowerDistribution pdh = new PowerDistribution();
   //Define Subsystems
   public static SwerveSubsystem driveTrain = new SwerveSubsystem();
  

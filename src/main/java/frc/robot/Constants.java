@@ -68,6 +68,14 @@ public final class Constants
     public static final int DRIVER_PORT         = 0;
     public static final int OPERATOR_PORT       = 1;
   }
+  public static final class ClimberConstants
+  {
+    public static final int kClimber1CANId = 25;
+    public static final int kClimber2CANId = 26;
+    public static final double currentMax = 1;
+    public static final int kClimber1PDH = 14;
+    public static final int kClimber2PDH = 15;
+  }
 
   public static class CanConstants
   {
