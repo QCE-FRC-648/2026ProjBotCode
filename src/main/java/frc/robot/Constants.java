@@ -28,6 +28,7 @@ public final class Constants
   public static final double LOOP_TIME  = 0.13; //s, 20ms + 110ms sprk max velocity lag
   public static final double MAX_SPEED  = Units.feetToMeters(15.1);
 
+
   public static class DrivetrainConfig {
     public static final double MAX_DRIVE_SPEED = 10.0; // m/s
     public static final double MAX_TURN_SPEED = 200.0; // deg/s
@@ -97,7 +98,8 @@ public final class Constants
     public static final int FlywheelMotor2CanID              = 19;
 
     // Indexer motor Rev Neo Spark Max
-    public static final int IndexerMotorCanID                = 28;
+    public static final int IndexerMotor1CanID                = 28;
+    public static final int IndexerMotor2CanID                = 31;
 
     //Intake spin motors Vortex Spark Flex
     public static final int IntakeSpinMotor1CanID            = 24;
@@ -110,12 +112,35 @@ public final class Constants
 
     //Hopper motor Rev Neo Spark Max 
     //**needs updated to correct CAN ID if used */
-    public static final int HopperMotorCanID                 = 01;
+    public static final int FuelAgitatorMotorCanID           = 01;
+
+    //Launcher hood motor Rev Neo Spark Max
+    public static final int LauncherHoodMotorCanID          = 33;
 
     //Climb motors Rev Neo Spark Max
     public static final int ClimbDeployMotorCanID            = 29;
-    public static final int ClimbGoUpMotorCanID              = 30;
+    public static final int ClimbGoUpMotor1CanID              = 30;
+    public static final int ClimbGoUpMotor2CanID              = 32;
   }
 
 
+  public static class Climber {
+    public static final double kGearRatio = 16.0;             // Example 16:1
+    public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
+    public static final double kMaxHeightInches = 18.0;      // Physical limit in inches
+  }
+
+  public static class IntakeDeploy {
+    public static final double kGearRatio = 5.0;            // Example gearbox reduction
+    public static final double kTravelPerRotation = 0.5;    // e.g., 0.5 inches per 1 rotation of the screw
+    public static final double kExtendedInches = 8.0;       // How far to push out
+    public static final double kMaxExtensionInches = 8.5;   // Physical stop
+  }
+
+  public static class Launcher {
+    public static final double kHoodGearRatio = 100.0; // Example: 100:1 reduction
+    public static final double kMaxHoodAngle = 45.0;  // Maximum degrees of travel
+    public static final double kAngleFender = 10.0;   // Angle for shooting near the speaker
+    public static final double kAnglePodium = 35.0;   // Angle for shooting from further away
+  }
 }

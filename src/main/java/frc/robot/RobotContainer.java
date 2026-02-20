@@ -22,7 +22,17 @@ import swervelib.SwerveInputStream;
 
 
 import frc.robot.Constants.OperatorConstants;
+import frc.robot.subsystems.ClimberSubsystem;
+import frc.robot.subsystems.IndexerSubsystem;
+import frc.robot.subsystems.IntakeDeploySubsystem;
+import frc.robot.subsystems.IntakeSubsystem;
+import frc.robot.subsystems.LauncherHoodSubsystem;
+import frc.robot.subsystems.LauncherSubsystem;
+import frc.robot.subsystems.FuelAgitatorSubsystem;
 import frc.robot.subsystems.swervedrive.*;
+import frc.robot.commands.Intake.IntakeHomingCommand;
+import frc.robot.commands.Intake.SmartAgitateCommand;
+import frc.robot.commands.Climber.ClimberHomingCommand;
 import frc.robot.commands.SwervedriveCommands.auto.*;
 import frc.robot.commands.SwervedriveCommands.drivebase.*;
 
@@ -34,6 +44,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
@@ -51,7 +62,16 @@ public class RobotContainer
 {
   //Define Subsystems
   public static SwerveSubsystem driveTrain = new SwerveSubsystem();
- 
+  
+  // Mechanism Subsystems
+  private final LauncherSubsystem m_launcher = new LauncherSubsystem();
+  private final IndexerSubsystem m_indexer = new IndexerSubsystem();
+  private final IntakeSubsystem m_intake = new IntakeSubsystem();
+  private final IntakeDeploySubsystem m_intakeDeploy = new IntakeDeploySubsystem();
+  private final ClimberSubsystem m_climber = new ClimberSubsystem();
+  private final FuelAgitatorSubsystem m_fuelAgitator = new FuelAgitatorSubsystem();
+  private final LauncherHoodSubsystem m_hood = new LauncherHoodSubsystem();
+
 
   //Define Controllers
   public static CommandXboxController driverController = new CommandXboxController(0);
@@ -79,6 +99,7 @@ public class RobotContainer
   public RobotContainer()
   {
     // Configure the trigger bindings
+    configureNamedCommands();
     configureBindings();
     DriverStation.silenceJoystickConnectionWarning(true);
     autoChooser = AutoBuilder.buildAutoChooser("Pass The Line Auto");
@@ -88,6 +109,46 @@ public class RobotContainer
     driveTrain.setDefaultCommand(driveFieldOrientedAnglularVelocity);
   }
  
+  private void configureNamedCommands() {
+    // Register commands for use in PathPlanner Event Markers
+    NamedCommands.registerCommand("HomeAll", getHomingSequence());
+    NamedCommands.registerCommand("IntakeExtend", new InstantCommand(m_intakeDeploy::extend));
+    NamedCommands.registerCommand("IntakeRetract", new InstantCommand(m_intakeDeploy::retract));
+    NamedCommands.registerCommand("LaunchPrep", new InstantCommand(() -> m_launcher.setVelocity(4500)));
+    NamedCommands.registerCommand("ClimbUp", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
+    NamedCommands.registerCommand("ClimbDown", new InstantCommand(() -> m_climber.setHeight(0)));
+    NamedCommands.registerCommand("AgitateFuel", new SmartAgitateCommand(m_fuelAgitator));
+  }
+
+  /*
+   private void configureNamedCommands() {
+    NamedCommands.registerCommand("HomeAll", getHomingSequence());
+    
+    // INTAKE: Wait until fully extended/retracted
+    NamedCommands.registerCommand("IntakeExtend", 
+        Commands.runOnce(m_intakeDeploy::extend, m_intakeDeploy)
+        .andThen(Commands.waitUntil(() -> Math.abs(m_intakeDeploy.getPosition() - Constants.Intake.kExtendedInches) < 0.5))
+    );
+
+    NamedCommands.registerCommand("IntakeRetract", 
+        Commands.runOnce(m_intakeDeploy::retract, m_intakeDeploy)
+        .andThen(Commands.waitUntil(() -> Math.abs(m_intakeDeploy.getPosition() - 0) < 0.5))
+    );
+
+    // CLIMBER: Wait until height is reached
+    NamedCommands.registerCommand("ClimbUp", 
+        Commands.runOnce(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches), m_climber)
+        .andThen(Commands.waitUntil(() -> Math.abs(m_climber.getPosition() - Constants.Climber.kMaxHeightInches) < 0.5))
+    );
+
+    // LAUNCHER: Wait until flywheels are at full speed before moving to the next path step
+    NamedCommands.registerCommand("LaunchPrep", 
+        Commands.runOnce(() -> m_launcher.setVelocity(4500), m_launcher)
+        .andThen(Commands.waitUntil(m_launcher::isAtTarget))
+    );
+  }
+   */
+
   /**
    * Use this method to define your trigger->command mappings. Triggers can be created via the
    * {@link Trigger#Trigger(java.util.function.BooleanSupplier)} constructor with an arbitrary predicate, or via the
@@ -95,15 +156,38 @@ public class RobotContainer
    * {@link CommandXboxController Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller PS4}
    * controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight joysticks}.
    */
-  private void configureBindings()
-  {
-    
-    //To do: Set Buttons, Set Speeds, Verify Directions
+  private void configureBindings() {
+    // Operator: Manual Homing (Emergency/Reset)
+    operatorController.start().whileTrue(new IntakeHomingCommand(m_intakeDeploy).withTimeout(2.0));
+    operatorController.back().whileTrue(new ClimberHomingCommand(m_climber).withTimeout(2.0));
 
-    // Operator Controls 
- 
-     
+    // Operator: Intake Control
+    operatorController.rightBumper().onTrue(new InstantCommand(m_intakeDeploy::extend));
+    operatorController.leftBumper().onTrue(new InstantCommand(m_intakeDeploy::retract));
+
+    // Operator: Launcher Control (Hold A to spin up)
+    operatorController.a().whileTrue(new RunCommand(() -> m_launcher.setVelocity(4000), m_launcher))
+                         .onFalse(new InstantCommand(m_launcher::stop));
+
+    operatorController.b().whileTrue(new SmartAgitateCommand(m_fuelAgitator));
+  
+    // Use D-Pad for quick angle presets
+    operatorController.povUp().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAnglePodium)));
+    operatorController.povDown().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAngleFender)));
+    operatorController.povLeft().onTrue(new InstantCommand(() -> m_hood.setAngle(0))); // Stowed
+
   }
+     
+  /**
+   * Returns a command that homes both the intake and climber in parallel.
+   */
+  public Command getHomingSequence() {
+    return new ParallelCommandGroup(
+        new IntakeHomingCommand(m_intakeDeploy).withTimeout(2.5),
+        new ClimberHomingCommand(m_climber).withTimeout(2.5)
+    );
+  }
+
   public void setMotorBrake(boolean brake)
   {
     driveTrain.setMotorBrake(brake);
@@ -113,11 +197,12 @@ public class RobotContainer
    *
    * @return the command to run in autonomous
    */
-  public Command getAutonomousCommand()
-  {
-    // Pass the auto line for points
-    return autoChooser.getSelected();
-    // return driveTrain.getAutonomousCommand("Pass The Line Auto");
+  public Command getAutonomousCommand() {
+    // This creates a sequence that HOMES first, then runs the PathPlanner Auto
+    return new SequentialCommandGroup(
+        getHomingSequence(),
+        autoChooser.getSelected()
+    );
   }
 }
 
