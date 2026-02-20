@@ -4,6 +4,7 @@
 
 package frc.robot;
 
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.pathplanner.lib.config.PIDConstants;
 
 import edu.wpi.first.math.controller.PIDController;
@@ -40,7 +41,12 @@ public final class Constants
    
   }
   // Maximum speed of the robot in meters per second, used to limit acceleration.
-
+  public static class CANConfig {
+    public static final int FLYWHEEL_LEFT = 22;
+    public static final int SHOOT_LEFT = 61;
+    public static final int SHOOT_RIGHT = 62;
+    public static final int INTAKE = 21;
+  }
 //  public static final class AutonConstants
 //  {
 //

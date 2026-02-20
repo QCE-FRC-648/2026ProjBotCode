@@ -15,19 +15,29 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Constants.CANConfig;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import java.io.File;
+import java.util.Collection;
+
 import swervelib.SwerveInputStream;
-
-
+import yams.mechanisms.velocity.FlyWheel;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.swervedrive.*;
 import frc.robot.commands.SwervedriveCommands.auto.*;
 import frc.robot.commands.SwervedriveCommands.drivebase.*;
+import frc.robot.subsystems.ShootFuel;
+
+
+import frc.robot.subsystems.flywheel;
+import frc.robot.subsystems.intake;
+import frc.robot.commands.Shoot;
+import frc.robot.commands.intakeRun;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-
+import frc.robot.commands.FireFuel;
+import frc.robot.subsystems.ShootFuel;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
@@ -36,6 +46,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 // import frc.robot.subsystems.drive.DriveSubsystem;
@@ -50,28 +61,32 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class RobotContainer
 {
   //Define Subsystems
-  public static SwerveSubsystem driveTrain = new SwerveSubsystem();
- 
+  //public static SwerveSubsystem driveTrain = new SwerveSubsystem();
+  public static flywheel m_flywheel = new flywheel();
+  public static ShootFuel m_shoot_left = new ShootFuel();
+  public static intake m_Intake = new intake();
 
+  
+  
   //Define Controllers
   public static CommandXboxController driverController = new CommandXboxController(0);
   public static CommandXboxController operatorController = new CommandXboxController(1);
 
   //Auto Chooser
-  private final SendableChooser<Command> autoChooser;
+  //private final SendableChooser<Command> autoChooser;
 
   /**
    * Converts driver input into a field-relative ChassisSpeeds that is controlled by angular velocity.
    */
-  SwerveInputStream driveAngularVelocity = SwerveInputStream.of(driveTrain.getSwerveDrive(),
-                                                                () -> driverController.getLeftY() * -1,
-                                                                () -> driverController.getLeftX() * -1)
-                                                            .withControllerRotationAxis(() -> driverController.getRightX() * -1)
-                                                            .deadband(OperatorConstants.DEADBAND)
-                                                            .cubeTranslationControllerAxis(true)
-                                                            .cubeRotationControllerAxis(true)
-                                                            .scaleTranslation(.8)
-                                                            .allianceRelativeControl(true);
+  //SwerveInputStream driveAngularVelocity = SwerveInputStream.of(driveTrain.getSwerveDrive(),
+                                                            //     () -> driverController.getLeftY() * -1,
+                                                            //     () -> driverController.getLeftX() * -1)
+                                                            // .withControllerRotationAxis(() -> driverController.getRightX() * -1)
+                                                            // .deadband(OperatorConstants.DEADBAND)
+                                                            // .cubeTranslationControllerAxis(true)
+                                                            // .cubeRotationControllerAxis(true)
+                                                            // .scaleTranslation(.8)
+                                                            // .allianceRelativeControl(true);
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -81,11 +96,14 @@ public class RobotContainer
     // Configure the trigger bindings
     configureBindings();
     DriverStation.silenceJoystickConnectionWarning(true);
-    autoChooser = AutoBuilder.buildAutoChooser("Pass The Line Auto");
-    SmartDashboard.putData("Auto Mode", autoChooser);
-    Command driveFieldOrientedAnglularVelocity = driveTrain.driveFieldOriented(driveAngularVelocity);
+      // Startup logging to help debug subsystems
+      SmartDashboard.putBoolean("Robot/Started", true);
+      //DriverStation.reportWarning("RobotContainer initialized; flywheel CAN ID = " + Constants.CANConfig.FLYWHEEL_LEFT, false);
+    // autoChooser = AutoBuilder.buildAutoChooser("Pass The Line Auto");
+    // SmartDashboard.putData("Auto Mode", autoChooser);
+    // Command driveFieldOrientedAnglularVelocity = driveTrain.driveFieldOriented(driveAngularVelocity);
 
-    driveTrain.setDefaultCommand(driveFieldOrientedAnglularVelocity);
+    // driveTrain.setDefaultCommand(driveFieldOrientedAnglularVelocity);
   }
  
   /**
@@ -95,18 +113,17 @@ public class RobotContainer
    * {@link CommandXboxController Xbox}/{@link edu.wpi.first.wpilibj2.command.button.CommandPS4Controller PS4}
    * controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight joysticks}.
    */
+  
   private void configureBindings()
   {
-    
-    //To do: Set Buttons, Set Speeds, Verify Directions
-
-    // Operator Controls 
- 
-     
+  // Bind operator right trigger to run the flywheel while held
+  operatorController.rightBumper().whileTrue(new Shoot(2000));
+  operatorController.leftBumper().whileTrue(new FireFuel(2000));
+  operatorController.leftTrigger().whileTrue(new intakeRun(2000));
   }
-  public void setMotorBrake(boolean brake)
+  //public void setMotorBrake(boolean brake)
   {
-    driveTrain.setMotorBrake(brake);
+    // driveTrain.setMotorBrake(brake);
   }
   /**
    * Use this to pass the autonomous command to the main {@link Robot} class.
@@ -116,8 +133,8 @@ public class RobotContainer
   public Command getAutonomousCommand()
   {
     // Pass the auto line for points
-    return autoChooser.getSelected();
+    //return autoChooser.getSelected();
     // return driveTrain.getAutonomousCommand("Pass The Line Auto");
+    return null;
   }
 }
-
