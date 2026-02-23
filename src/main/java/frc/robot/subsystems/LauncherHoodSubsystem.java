@@ -9,6 +9,8 @@ import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.RelativeEncoder;
 
+import edu.wpi.first.math.geometry.Translation2d;
+import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
@@ -19,39 +21,60 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     private final SparkClosedLoopController m_controller;
     private final RelativeEncoder m_encoder;
 
+    // The Lookup Table: Keys are Distance (meters), Values are Hood Angles (degrees)
+    private final InterpolatingDoubleTreeMap m_angleTable = new InterpolatingDoubleTreeMap();
+
     public LauncherHoodSubsystem() {
         m_motor = new SparkMax(Constants.CanConstants.LauncherHoodMotorCanID, MotorType.kBrushless);
         m_controller = m_motor.getClosedLoopController();
         m_encoder = m_motor.getEncoder();
 
+        setupInterpolationTable();
+        
         SparkMaxConfig config = new SparkMaxConfig();
-
-        // 1. Encoder Conversion (Degrees)
         double conversionFactor = 360.0 / Constants.Launcher.kHoodGearRatio;
+        
         config.encoder
             .positionConversionFactor(conversionFactor)
             .velocityConversionFactor(conversionFactor / 60.0);
 
-        // 2. Motor Limits & Safety
-        config.idleMode(IdleMode.kBrake) // Must be brake to hold angle against vibrations
-              .smartCurrentLimit(30);
+        config.idleMode(IdleMode.kBrake).smartCurrentLimit(30);
 
-        // 3. Soft Limits (Crucial for a hood!)
         config.softLimit
             .forwardSoftLimitEnabled(true)
             .forwardSoftLimit(Constants.Launcher.kMaxHoodAngle)
             .reverseSoftLimitEnabled(true)
-            .reverseSoftLimit(0); // 0 is usually the "stowed" or "bottom" position
+            .reverseSoftLimit(0);
 
-        // 4. Position PID
-        config.closedLoop
-            .p(0.05) 
-            .outputRange(-0.4, 0.4); // Limit speed to prevent mechanical damage
+        config.closedLoop.p(0.05).outputRange(-0.4, 0.4);
 
         m_motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 
-    /** @param degrees Target angle for the hood */
+    private void setupInterpolationTable() {
+        // Syntax: m_angleTable.put(DistanceInMeters, HoodAngleInDegrees);
+        // Add your testing data here!
+        m_angleTable.put(1.0, 10.0); 
+        m_angleTable.put(2.0, 25.0);
+        m_angleTable.put(3.0, 38.0);
+        m_angleTable.put(5.0, 55.0);
+    }
+
+    /**
+     * Calculates the distance to the target and sets the hood angle accordingly.
+     * @param robotPose Current Translation2d of the robot from Odometry
+     * @param targetPose Translation2d of the Speaker/Target
+     */
+    public void setAngleFromPose(Translation2d robotPose, Translation2d targetPose) {
+        double distance = robotPose.getDistance(targetPose);
+        double targetAngle = m_angleTable.get(distance);
+        
+        setAngle(targetAngle);
+        
+        SmartDashboard.putNumber("Launcher/Auto Distance", distance);
+        SmartDashboard.putNumber("Launcher/Auto Target Angle", targetAngle);
+    }
+
     public void setAngle(double degrees) {
         m_controller.setReference(degrees, SparkMax.ControlType.kPosition);
     }

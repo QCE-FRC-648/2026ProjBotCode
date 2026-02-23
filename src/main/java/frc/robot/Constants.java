@@ -7,6 +7,10 @@ package frc.robot;
 import com.pathplanner.lib.config.PIDConstants;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
@@ -27,7 +31,10 @@ public final class Constants
   public static final Matter CHASSIS    = new Matter(new Translation3d(0, 0, Units.inchesToMeters(8)), ROBOT_MASS);
   public static final double LOOP_TIME  = 0.13; //s, 20ms + 110ms sprk max velocity lag
   public static final double MAX_SPEED  = Units.feetToMeters(15.1);
-
+    public static final Transform3d kRobotToCam = new Transform3d(
+    new Translation3d(Units.inchesToMeters(18), Units.inchesToMeters(-3), Units.inchesToMeters(22.5)), 
+    new Rotation3d(0, Units.degreesToRadians(0), 0)
+  );
 
   public static class DrivetrainConfig {
     public static final double MAX_DRIVE_SPEED = 10.0; // m/s
@@ -142,5 +149,40 @@ public final class Constants
     public static final double kMaxHoodAngle = 45.0;  // Maximum degrees of travel
     public static final double kAngleFender = 10.0;   // Angle for shooting near the speaker
     public static final double kAnglePodium = 35.0;   // Angle for shooting from further away
+  }
+
+  
+
+
+  public static final class FieldObjectLocations
+  {
+    // Robot side aliases for readability
+    public static final Rotation2d FRONT = Rotation2d.fromDegrees(0);
+    public static final Rotation2d REAR  = Rotation2d.fromDegrees(180);
+    public static final Rotation2d LEFT  = Rotation2d.fromDegrees(90);
+    public static final Rotation2d RIGHT = Rotation2d.fromDegrees(-90);
+
+    /** Helper class to store a field position and the robot side that should face it */
+    public static class FieldTarget {
+      public final Translation2d pos;
+      public final Rotation2d side;
+
+      public FieldTarget(double x, double y, Rotation2d robotSide) {
+        this.pos = new Translation2d(x, y);
+        this.side = robotSide;
+      }
+    }
+
+    // Human-readable targets
+    public static final FieldTarget BLUE_HUB      = new FieldTarget(4.6, 4, FRONT);
+    public static final FieldTarget BLUE_OUTPOST  = new FieldTarget(0.0, 0.65, FRONT);
+    public static final FieldTarget BLUE_TOWER    = new FieldTarget(0.0, 3.73, REAR);
+    public static final FieldTarget BLUE_DEPOT    = new FieldTarget(0.0, 5.9, FRONT);
+    public static final FieldTarget RED_HUB       = new FieldTarget(11.9, 4, FRONT);
+    public static final FieldTarget RED_OUTPOST   = new FieldTarget(16.5, 7.4, FRONT);
+    public static final FieldTarget RED_TOWER     = new FieldTarget(16.5, 4.3, REAR);
+    public static final FieldTarget RED_DEPOT     = new FieldTarget(16.5, 2.1, FRONT);
+
+    
   }
 }

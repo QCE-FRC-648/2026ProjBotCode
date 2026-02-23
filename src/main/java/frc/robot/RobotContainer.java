@@ -32,6 +32,7 @@ import frc.robot.subsystems.FuelAgitatorSubsystem;
 import frc.robot.subsystems.swervedrive.*;
 import frc.robot.commands.Intake.IntakeHomingCommand;
 import frc.robot.commands.Intake.SmartAgitateCommand;
+import frc.robot.commands.Launcher.AutoAimSpinUpAndFeedCommand;
 import frc.robot.commands.Launcher.SpinUpAndFeedCommand;
 import frc.robot.commands.Climber.ClimberHomingCommand;
 import frc.robot.commands.SwervedriveCommands.auto.*;
@@ -119,6 +120,17 @@ public class RobotContainer
     NamedCommands.registerCommand("ClimbUp", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
     NamedCommands.registerCommand("ClimbDown", new InstantCommand(() -> m_climber.setHeight(0)));
     NamedCommands.registerCommand("AgitateFuel", new SmartAgitateCommand(m_fuelAgitator));
+    NamedCommands.registerCommand("SpinIntake", new RunCommand(() -> m_intake.setVelocity(3000), m_intake)
+      .finallyDo(interrupted -> m_intake.stop()));
+    NamedCommands.registerCommand("AutoHoodAngle", new InstantCommand(() -> {
+      boolean isRed = DriverStation.getAlliance().isPresent() &&
+                      DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+      Constants.FieldObjectLocations.FieldTarget hub = isRed
+          ? Constants.FieldObjectLocations.RED_HUB
+          : Constants.FieldObjectLocations.BLUE_HUB;
+
+      m_hood.setAngleFromPose(driveTrain.getPose().getTranslation(), hub.pos);
+    }, m_hood));
   }
 
   /*
@@ -159,6 +171,28 @@ public class RobotContainer
    */
   private void configureBindings() {
     // Operator: Manual climber control (left stick up/down)
+
+    boolean isRed = DriverStation.getAlliance().isPresent() && 
+                    DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
+
+    Constants.FieldObjectLocations.FieldTarget hub = isRed ? Constants.FieldObjectLocations.RED_HUB : Constants.FieldObjectLocations.BLUE_HUB;
+    Constants.FieldObjectLocations.FieldTarget outpost = isRed ? Constants.FieldObjectLocations.RED_OUTPOST : Constants.FieldObjectLocations.BLUE_OUTPOST;
+    Constants.FieldObjectLocations.FieldTarget tower = isRed ? Constants.FieldObjectLocations.RED_TOWER : Constants.FieldObjectLocations.BLUE_TOWER;
+    Constants.FieldObjectLocations.FieldTarget depot = isRed ? Constants.FieldObjectLocations.RED_DEPOT : Constants.FieldObjectLocations.BLUE_DEPOT;
+
+   
+
+    // Aim the robot at the scoring station using the target constant
+    driverController.rightTrigger().whileTrue(
+        driveTrain.driveAndAim(driveAngularVelocity, hub));
+    driverController.leftTrigger().whileTrue(
+        driveTrain.driveAndAim(driveAngularVelocity, outpost));
+    driverController.rightBumper().whileTrue(
+        driveTrain.driveAndAim(driveAngularVelocity, tower));
+    driverController.leftBumper().whileTrue(
+        driveTrain.driveAndAim(driveAngularVelocity, depot));  
+
+     // Operator Controls 
     m_climber.setDefaultCommand(new RunCommand(() -> {
       double speed = MathUtil.applyDeadband(-operatorController.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND);
 
@@ -180,6 +214,8 @@ public class RobotContainer
     // Operator: Intake Control
     operatorController.rightBumper().onTrue(new InstantCommand(m_intakeDeploy::extend));
     operatorController.leftBumper().onTrue(new InstantCommand(m_intakeDeploy::retract));
+  operatorController.x().whileTrue(new RunCommand(() -> m_intake.setVelocity(3000), m_intake))
+            .onFalse(new InstantCommand(m_intake::stop));
 
     // Operator: Launcher Control (Hold A to spin up)
     operatorController.a().whileTrue(new RunCommand(() -> m_launcher.setVelocity(4000), m_launcher))
@@ -190,6 +226,23 @@ public class RobotContainer
   // Operator: Spin up launcher, then feed indexer + agitator
     operatorController.y().whileTrue(
       new SpinUpAndFeedCommand(m_launcher, m_indexer, m_fuelAgitator, 4500, 2000, 3000));
+
+    // Operator: Auto-aim hood + spin up + feed (default hub)
+    operatorController.rightTrigger().whileTrue(
+      new AutoAimSpinUpAndFeedCommand(m_launcher, m_indexer, m_fuelAgitator, m_hood, driveTrain, 4500, 2000, 3000));
+
+    // Operator: Auto-aim hood + spin up + feed (hard-coded target at 2m,2m)
+    operatorController.leftTrigger().whileTrue(
+      new AutoAimSpinUpAndFeedCommand(
+        m_launcher,
+        m_indexer,
+        m_fuelAgitator,
+        m_hood,
+        driveTrain,
+        4500,
+        2000,
+        3000,
+        new Translation2d(2.0, 2.0)));
   
     // Use D-Pad for quick angle presets
     operatorController.povUp().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAnglePodium)));
