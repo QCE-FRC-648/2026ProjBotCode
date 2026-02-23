@@ -32,6 +32,7 @@ import frc.robot.subsystems.FuelAgitatorSubsystem;
 import frc.robot.subsystems.swervedrive.*;
 import frc.robot.commands.Intake.IntakeHomingCommand;
 import frc.robot.commands.Intake.SmartAgitateCommand;
+import frc.robot.commands.Launcher.SpinUpAndFeedCommand;
 import frc.robot.commands.Climber.ClimberHomingCommand;
 import frc.robot.commands.SwervedriveCommands.auto.*;
 import frc.robot.commands.SwervedriveCommands.drivebase.*;
@@ -157,6 +158,21 @@ public class RobotContainer
    * controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight joysticks}.
    */
   private void configureBindings() {
+    // Operator: Manual climber control (left stick up/down)
+    m_climber.setDefaultCommand(new RunCommand(() -> {
+      double speed = MathUtil.applyDeadband(-operatorController.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND);
+
+      if (m_climber.isAtBottom() && speed < 0) {
+        speed = 0;
+      }
+
+      if (m_climber.getPosition() >= Constants.Climber.kMaxHeightInches && speed > 0) {
+        speed = 0;
+      }
+
+      m_climber.runManual(speed);
+    }, m_climber));
+
     // Operator: Manual Homing (Emergency/Reset)
     operatorController.start().whileTrue(new IntakeHomingCommand(m_intakeDeploy).withTimeout(2.0));
     operatorController.back().whileTrue(new ClimberHomingCommand(m_climber).withTimeout(2.0));
@@ -170,6 +186,10 @@ public class RobotContainer
                          .onFalse(new InstantCommand(m_launcher::stop));
 
     operatorController.b().whileTrue(new SmartAgitateCommand(m_fuelAgitator));
+
+  // Operator: Spin up launcher, then feed indexer + agitator
+    operatorController.y().whileTrue(
+      new SpinUpAndFeedCommand(m_launcher, m_indexer, m_fuelAgitator, 4500, 2000, 3000));
   
     // Use D-Pad for quick angle presets
     operatorController.povUp().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAnglePodium)));
