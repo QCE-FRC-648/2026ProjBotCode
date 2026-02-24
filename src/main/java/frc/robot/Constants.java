@@ -83,7 +83,7 @@ public final class Constants
     //Swerver motor 1 Front Right Neo Spark Max
     public static final int SwerveFrontRightDriveMotorCanID  = 10;
     public static final int SwerveFrontRightSteerMotorCanID  = 11;
-    public static final int CanCoderFrontRight                = 20;
+    public static final int CanCoderFrontRight               = 20;
     
     //Swerver motor 2 Back Right Neo Spark Max
     public static final int SwerveBackRightDriveMotorCanID   = 12;
@@ -106,8 +106,7 @@ public final class Constants
 
     // Indexer motor Rev Neo Spark Max
     public static final int IndexerMotor1CanID                = 28;
-    public static final int IndexerMotor2CanID                = 31;
-
+    
     //Intake spin motors Vortex Spark Flex
     public static final int IntakeSpinMotor1CanID            = 24;
     public static final int IntakeSpinMotor2CanID            = 25;
@@ -119,15 +118,15 @@ public final class Constants
 
     //Hopper motor Rev Neo Spark Max 
     //**needs updated to correct CAN ID if used */
-    public static final int FuelAgitatorMotorCanID           = 01;
+    public static final int FuelAgitatorMotor1CanID           = 31;
+    public static final int FuelAgitatorMotor2CanID           = 32;
 
     //Launcher hood motor Rev Neo Spark Max
-    public static final int LauncherHoodMotorCanID          = 33;
+    public static final int LauncherHoodMotorCanID          = 30;
 
     //Climb motors Rev Neo Spark Max
-    public static final int ClimbDeployMotorCanID            = 29;
-    public static final int ClimbGoUpMotor1CanID              = 30;
-    public static final int ClimbGoUpMotor2CanID              = 32;
+    public static final int ClimbGoUpMotor1CanID              = 28;
+    //public static final int ClimbGoUpMotor2CanID              = 32;
   }
 
 

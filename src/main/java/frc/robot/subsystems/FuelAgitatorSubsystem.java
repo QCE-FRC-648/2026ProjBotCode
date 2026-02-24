@@ -16,15 +16,18 @@ import frc.robot.Constants;
 public class FuelAgitatorSubsystem extends SubsystemBase {
 
     private final SparkMax m_motor;
+    private final SparkMax m_motor2;
     private final SparkClosedLoopController m_controller;
     private final RelativeEncoder m_encoder;
 
     public FuelAgitatorSubsystem() {
-        m_motor = new SparkMax(Constants.CanConstants.FuelAgitatorMotorCanID, MotorType.kBrushless);
+        m_motor = new SparkMax(Constants.CanConstants.FuelAgitatorMotor1CanID, MotorType.kBrushless);
+        m_motor2 = new SparkMax(Constants.CanConstants.FuelAgitatorMotor2CanID, MotorType.kBrushless);
         m_controller = m_motor.getClosedLoopController();
         m_encoder = m_motor.getEncoder();
 
         SparkMaxConfig config = new SparkMaxConfig();
+        SparkMaxConfig followerConfig = new SparkMaxConfig();
 
         config.idleMode(IdleMode.kCoast)
               .smartCurrentLimit(30);
@@ -34,7 +37,13 @@ public class FuelAgitatorSubsystem extends SubsystemBase {
             .p(0.0001)
             .velocityFF(0.00017); 
 
+        followerConfig
+            .idleMode(IdleMode.kCoast)
+            .smartCurrentLimit(30)
+            .follow(m_motor, true);
+
         m_motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        m_motor2.configure(followerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     }
 
     /** @param rpm Target velocity in RPM */
