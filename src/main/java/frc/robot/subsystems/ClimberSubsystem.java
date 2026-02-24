@@ -17,7 +17,7 @@ import frc.robot.Constants;
 public class ClimberSubsystem extends SubsystemBase {
 
     private final SparkMax ClimberMotor1;
-    private final SparkMax ClimberMotor2;
+    //private final SparkMax ClimberMotor2;
     private final SparkClosedLoopController controller;
     private final RelativeEncoder encoder;
 
@@ -25,13 +25,13 @@ public class ClimberSubsystem extends SubsystemBase {
 
     public ClimberSubsystem() {
         ClimberMotor1 = new SparkMax(Constants.CanConstants.ClimbGoUpMotor1CanID, MotorType.kBrushless);
-        ClimberMotor2 = new SparkMax(Constants.CanConstants.ClimbGoUpMotor2CanID, MotorType.kBrushless);
+        //ClimberMotor2 = new SparkMax(Constants.CanConstants.ClimbGoUpMotor2CanID, MotorType.kBrushless);
 
         controller = ClimberMotor1.getClosedLoopController();
         encoder = ClimberMotor1.getEncoder();
 
         SparkMaxConfig ClimberMotor1Config = new SparkMaxConfig();
-        SparkMaxConfig ClimberMotor2Config = new SparkMaxConfig();
+        //SparkMaxConfig ClimberMotor2Config = new SparkMaxConfig();
 
         // --- ENCODER CONVERSION (INCHES) ---
         // This makes 1.0 in code equal 1 inch on the robot
@@ -64,13 +64,13 @@ public class ClimberSubsystem extends SubsystemBase {
             .forwardSoftLimit(Constants.Climber.kMaxHeightInches);
 
         // Follower
-        ClimberMotor2Config
-            .idleMode(IdleMode.kBrake)
-            .follow(ClimberMotor1, false); 
+        //ClimberMotor2Config
+        //    .idleMode(IdleMode.kBrake)
+        //    .follow(ClimberMotor1, false); 
 
         // Apply Configurations
         ClimberMotor1.configure(ClimberMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-        ClimberMotor2.configure(ClimberMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        //ClimberMotor2.configure(ClimberMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         encoder.setPosition(0);
     }
