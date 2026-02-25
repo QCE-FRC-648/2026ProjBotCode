@@ -62,6 +62,15 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  */
 public class RobotContainer
 {
+  private static final String kLauncherRpmKey = "Tuning/Launcher RPM";
+  private static final String kIndexerRpmKey = "Tuning/Indexer RPM";
+  private static final String kAgitatorRpmKey = "Tuning/Agitator RPM";
+  private static final String kIntakeRpmKey = "Tuning/Intake RPM";
+
+  private static final double kLauncherRpmDefault = 4500;
+  private static final double kIndexerRpmDefault = 2000;
+  private static final double kAgitatorRpmDefault = 3000;
+  private static final double kIntakeRpmDefault = 3000;
   //Define Subsystems
   public static SwerveSubsystem driveTrain = new SwerveSubsystem();
   
@@ -100,6 +109,7 @@ public class RobotContainer
    */
   public RobotContainer()
   {
+    initTuningDashboard();
     // Configure the trigger bindings
     configureNamedCommands();
     configureBindings();
@@ -116,11 +126,13 @@ public class RobotContainer
     NamedCommands.registerCommand("HomeAll", getHomingSequence());
     NamedCommands.registerCommand("IntakeExtend", new InstantCommand(m_intakeDeploy::extend));
     NamedCommands.registerCommand("IntakeRetract", new InstantCommand(m_intakeDeploy::retract));
-    NamedCommands.registerCommand("LaunchPrep", new InstantCommand(() -> m_launcher.setVelocity(4500)));
+    NamedCommands.registerCommand("LaunchPrep", new InstantCommand(() ->
+      m_launcher.setVelocity(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault))));
     NamedCommands.registerCommand("ClimbUp", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
     NamedCommands.registerCommand("ClimbDown", new InstantCommand(() -> m_climber.setHeight(0)));
     NamedCommands.registerCommand("AgitateFuel", new SmartAgitateCommand(m_fuelAgitator));
-    NamedCommands.registerCommand("SpinIntake", new RunCommand(() -> m_intake.setVelocity(3000), m_intake)
+    NamedCommands.registerCommand("SpinIntake", new RunCommand(() ->
+      m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake)
       .finallyDo(interrupted -> m_intake.stop()));
     NamedCommands.registerCommand("AutoHoodAngle", new InstantCommand(() -> {
       boolean isRed = DriverStation.getAlliance().isPresent() &&
@@ -214,22 +226,38 @@ public class RobotContainer
     // Operator: Intake Control
     operatorController.rightBumper().onTrue(new InstantCommand(m_intakeDeploy::extend));
     operatorController.leftBumper().onTrue(new InstantCommand(m_intakeDeploy::retract));
-  operatorController.x().whileTrue(new RunCommand(() -> m_intake.setVelocity(3000), m_intake))
-            .onFalse(new InstantCommand(m_intake::stop));
+    operatorController.x().whileTrue(new RunCommand(() ->
+      m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake))
+      .onFalse(new InstantCommand(m_intake::stop));
 
     // Operator: Launcher Control (Hold A to spin up)
-    operatorController.a().whileTrue(new RunCommand(() -> m_launcher.setVelocity(4000), m_launcher))
+    operatorController.a().whileTrue(new RunCommand(() ->
+      m_launcher.setVelocity(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault)), m_launcher))
                          .onFalse(new InstantCommand(m_launcher::stop));
 
     operatorController.b().whileTrue(new SmartAgitateCommand(m_fuelAgitator));
 
   // Operator: Spin up launcher, then feed indexer + agitator
     operatorController.y().whileTrue(
-      new SpinUpAndFeedCommand(m_launcher, m_indexer, m_fuelAgitator, 4500, 2000, 3000));
+      new SpinUpAndFeedCommand(
+        m_launcher,
+        m_indexer,
+        m_fuelAgitator,
+        () -> getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault),
+        () -> getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault),
+        () -> getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault)));
 
     // Operator: Auto-aim hood + spin up + feed (default hub)
     operatorController.rightTrigger().whileTrue(
-      new AutoAimSpinUpAndFeedCommand(m_launcher, m_indexer, m_fuelAgitator, m_hood, driveTrain, 4500, 2000, 3000));
+      new AutoAimSpinUpAndFeedCommand(
+        m_launcher,
+        m_indexer,
+        m_fuelAgitator,
+        m_hood,
+        driveTrain,
+        () -> getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault),
+        () -> getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault),
+        () -> getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault)));
 
     // Operator: Auto-aim hood + spin up + feed (hard-coded target at 2m,2m)
     operatorController.leftTrigger().whileTrue(
@@ -239,9 +267,9 @@ public class RobotContainer
         m_fuelAgitator,
         m_hood,
         driveTrain,
-        4500,
-        2000,
-        3000,
+        () -> getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault),
+        () -> getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault),
+        () -> getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault),
         new Translation2d(2.0, 2.0)));
   
     // Use D-Pad for quick angle presets
@@ -249,6 +277,17 @@ public class RobotContainer
     operatorController.povDown().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAngleFender)));
     operatorController.povLeft().onTrue(new InstantCommand(() -> m_hood.setAngle(0))); // Stowed
 
+  }
+
+  private void initTuningDashboard() {
+    SmartDashboard.putNumber(kLauncherRpmKey, SmartDashboard.getNumber(kLauncherRpmKey, kLauncherRpmDefault));
+    SmartDashboard.putNumber(kIndexerRpmKey, SmartDashboard.getNumber(kIndexerRpmKey, kIndexerRpmDefault));
+    SmartDashboard.putNumber(kAgitatorRpmKey, SmartDashboard.getNumber(kAgitatorRpmKey, kAgitatorRpmDefault));
+    SmartDashboard.putNumber(kIntakeRpmKey, SmartDashboard.getNumber(kIntakeRpmKey, kIntakeRpmDefault));
+  }
+
+  private double getTuningNumber(String key, double defaultValue) {
+    return SmartDashboard.getNumber(key, defaultValue);
   }
      
   /**

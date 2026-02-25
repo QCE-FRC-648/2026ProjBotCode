@@ -10,6 +10,7 @@ import frc.robot.subsystems.LauncherHoodSubsystem;
 import frc.robot.subsystems.LauncherSubsystem;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
 import java.util.Objects;
+import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 
 /**
@@ -23,9 +24,9 @@ public class AutoAimSpinUpAndFeedCommand extends Command {
     private final LauncherHoodSubsystem m_hood;
     private final SwerveSubsystem m_swerve;
     private final Supplier<Translation2d> m_targetSupplier;
-    private final double m_launcherRpm;
-    private final double m_indexerRpm;
-    private final double m_agitatorRpm;
+    private final DoubleSupplier m_launcherRpm;
+    private final DoubleSupplier m_indexerRpm;
+    private final DoubleSupplier m_agitatorRpm;
     private boolean m_isFeeding = false;
 
     public AutoAimSpinUpAndFeedCommand(
@@ -37,8 +38,9 @@ public class AutoAimSpinUpAndFeedCommand extends Command {
             double launcherRpm,
             double indexerRpm,
             double agitatorRpm) {
-        this(launcher, indexer, agitator, hood, swerve, launcherRpm, indexerRpm, agitatorRpm,
-            AutoAimSpinUpAndFeedCommand::getAllianceHubPose);
+    this(launcher, indexer, agitator, hood, swerve,
+        () -> launcherRpm, () -> indexerRpm, () -> agitatorRpm,
+        AutoAimSpinUpAndFeedCommand::getAllianceHubPose);
     }
 
     public AutoAimSpinUpAndFeedCommand(
@@ -51,8 +53,36 @@ public class AutoAimSpinUpAndFeedCommand extends Command {
             double indexerRpm,
             double agitatorRpm,
             Translation2d targetPose) {
-        this(launcher, indexer, agitator, hood, swerve, launcherRpm, indexerRpm, agitatorRpm,
-            () -> Objects.requireNonNull(targetPose, "targetPose"));
+    this(launcher, indexer, agitator, hood, swerve,
+        () -> launcherRpm, () -> indexerRpm, () -> agitatorRpm,
+        () -> Objects.requireNonNull(targetPose, "targetPose"));
+    }
+
+    public AutoAimSpinUpAndFeedCommand(
+        LauncherSubsystem launcher,
+        IndexerSubsystem indexer,
+        FuelAgitatorSubsystem agitator,
+        LauncherHoodSubsystem hood,
+        SwerveSubsystem swerve,
+        DoubleSupplier launcherRpm,
+        DoubleSupplier indexerRpm,
+        DoubleSupplier agitatorRpm) {
+    this(launcher, indexer, agitator, hood, swerve, launcherRpm, indexerRpm, agitatorRpm,
+        AutoAimSpinUpAndFeedCommand::getAllianceHubPose);
+    }
+
+    public AutoAimSpinUpAndFeedCommand(
+        LauncherSubsystem launcher,
+        IndexerSubsystem indexer,
+        FuelAgitatorSubsystem agitator,
+        LauncherHoodSubsystem hood,
+        SwerveSubsystem swerve,
+        DoubleSupplier launcherRpm,
+        DoubleSupplier indexerRpm,
+        DoubleSupplier agitatorRpm,
+        Translation2d targetPose) {
+    this(launcher, indexer, agitator, hood, swerve, launcherRpm, indexerRpm, agitatorRpm,
+        () -> Objects.requireNonNull(targetPose, "targetPose"));
     }
 
     public AutoAimSpinUpAndFeedCommand(
@@ -61,9 +91,9 @@ public class AutoAimSpinUpAndFeedCommand extends Command {
             FuelAgitatorSubsystem agitator,
             LauncherHoodSubsystem hood,
             SwerveSubsystem swerve,
-            double launcherRpm,
-            double indexerRpm,
-            double agitatorRpm,
+        DoubleSupplier launcherRpm,
+        DoubleSupplier indexerRpm,
+        DoubleSupplier agitatorRpm,
             Supplier<Translation2d> targetSupplier) {
         m_launcher = launcher;
         m_indexer = indexer;
@@ -81,21 +111,21 @@ public class AutoAimSpinUpAndFeedCommand extends Command {
     @Override
     public void initialize() {
         m_isFeeding = false;
-        m_launcher.setVelocity(m_launcherRpm);
+    m_launcher.setVelocity(m_launcherRpm.getAsDouble());
     }
 
     @Override
     public void execute() {
         m_hood.setAngleFromPose(m_swerve.getPose().getTranslation(), m_targetSupplier.get());
-        m_launcher.setVelocity(m_launcherRpm);
+    m_launcher.setVelocity(m_launcherRpm.getAsDouble());
 
         if (!m_isFeeding && m_launcher.isAtTarget()) {
             m_isFeeding = true;
         }
 
         if (m_isFeeding) {
-            m_indexer.setVelocity(m_indexerRpm);
-            m_agitator.setVelocity(m_agitatorRpm);
+            m_indexer.setVelocity(m_indexerRpm.getAsDouble());
+            m_agitator.setVelocity(m_agitatorRpm.getAsDouble());
         }
     }
 
