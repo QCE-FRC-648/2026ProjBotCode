@@ -11,6 +11,7 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.RelativeEncoder;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -20,6 +21,7 @@ public class ClimberSubsystem extends SubsystemBase {
     //private final SparkMax ClimberMotor2;
     private final SparkClosedLoopController controller;
     private final RelativeEncoder encoder;
+    private final DigitalInput combinedLimitSwitch;
 
     private double targetPosition = 0;
 
@@ -44,7 +46,8 @@ public class ClimberSubsystem extends SubsystemBase {
         // Leader: Brake mode is critical to hold weight
         ClimberMotor1Config
             .idleMode(IdleMode.kBrake)
-            .smartCurrentLimit(50); 
+            .smartCurrentLimit(50);
+        
 
         // Position PID setup
         ClimberMotor1Config.closedLoop
@@ -55,8 +58,10 @@ public class ClimberSubsystem extends SubsystemBase {
         ClimberMotor1Config.limitSwitch
             .forwardLimitSwitchType(Type.kNormallyClosed)
             .reverseLimitSwitchType(Type.kNormallyClosed)
-            .forwardLimitSwitchEnabled(true)  
-            .reverseLimitSwitchEnabled(true); 
+            // We're using a single magnetic limit switch wired to the RoboRIO DIO.
+            // Disable the motor controller's onboard limit switches to avoid conflicting behavior.
+            .forwardLimitSwitchEnabled(false)
+            .reverseLimitSwitchEnabled(false);
 
         // Soft limits (Now using INCHES instead of rotations)
         ClimberMotor1Config.softLimit
@@ -73,6 +78,10 @@ public class ClimberSubsystem extends SubsystemBase {
         //ClimberMotor2.configure(ClimberMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
         encoder.setPosition(0);
+
+        // Initialize the combined magnetic limit switch (wired to RoboRIO DIO). 
+        // Assumes channel configured in Constants.Climber.kLimitSwitchDIO (see Constants).
+        combinedLimitSwitch = new DigitalInput(Constants.Climber.kClimberLimitSwitchDIO);
     }
 
     /** @param inches Target height in inches */
@@ -90,7 +99,20 @@ public class ClimberSubsystem extends SubsystemBase {
     }
 
     public boolean isAtBottom() {
-        return ClimberMotor1.getReverseLimitSwitch().isPressed();
+        return isSwitchActive();
+    }
+
+    /**
+     * Returns true when the magnetic limit switch is triggered.
+     * Many magnetic sensors are wired normally-closed; invert if needed.
+     */
+    public boolean isSwitchActive() {
+        // DigitalInput.get() returns true when the circuit is HIGH. If your sensor is
+        // normally-closed to ground, you may need to invert this logic. The
+        // previous implementation treated the hardware switch as 'pressed' when
+        // getReverseLimitSwitch().isPressed() returned true; adjust wiring/logic
+        // as necessary.
+        return !combinedLimitSwitch.get();
     }
 
     public void resetEncoder() {
@@ -105,9 +127,34 @@ public class ClimberSubsystem extends SubsystemBase {
     public void periodic() {
         SmartDashboard.putNumber("Climber/Position Inches", encoder.getPosition());
         SmartDashboard.putBoolean("Climber/At Bottom", isAtBottom());
-        
-        if (isAtBottom()) {
+        SmartDashboard.putNumber("ClimberCurrent", ClimberMotor1.getOutputCurrent());
+
+        // Zeroing logic: only reset encoder when the switch is active and the
+        // encoder reports a position near the lower part of travel to avoid
+        // accidental resets when at the top hitting a different magnetic.
+        double pos = encoder.getPosition();
+        if (isSwitchActive() && pos < (Constants.Climber.kMaxHeightInches / 2.0)) {
             resetEncoder();
+        }
+    }
+
+    /** Pulls the climber down (toward 0) with safety checks */
+    public void pullDown(double speed) {
+        // When switch is active and we are very near bottom, stop
+        if (isSwitchActive() && encoder.getPosition() < (Constants.Climber.kMaxHeightInches / 2.0)) {
+            ClimberMotor1.stopMotor();
+        } else {
+            ClimberMotor1.set(Math.abs(speed));
+        }
+    }
+
+    /** Releases the climber up (away from 0) with safety checks */
+    public void release(double speed) {
+        // When switch is active and encoder indicates we are near the top, stop
+        if (isSwitchActive() && encoder.getPosition() > (Constants.Climber.kMaxHeightInches / 2.0)) {
+            ClimberMotor1.stopMotor();
+        } else {
+            ClimberMotor1.set(-Math.abs(speed));
         }
     }
 }

@@ -134,6 +134,8 @@ public final class Constants
     public static final double kGearRatio = 16.0;             // Example 16:1
     public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
     public static final double kMaxHeightInches = 18.0;      // Physical limit in inches
+    // DIO channel for the combined magnetic limit switch wired to the RoboRIO
+    public static final int kClimberLimitSwitchDIO = 0;
   }
 
   public static class IntakeDeploy {
@@ -141,6 +143,9 @@ public final class Constants
     public static final double kTravelPerRotation = 0.5;    // e.g., 0.5 inches per 1 rotation of the screw
     public static final double kExtendedInches = 8.0;       // How far to push out
     public static final double kMaxExtensionInches = 8.5;   // Physical stop
+    // DIO channels for the intake deploy lower and upper magnetic limit switches
+    public static final int kLowerLimitDIO = 1;
+    public static final int kUpperLimitDIO = 2;
   }
 
   public static class Launcher {

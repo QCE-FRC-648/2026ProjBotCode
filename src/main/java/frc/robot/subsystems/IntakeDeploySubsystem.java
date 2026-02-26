@@ -11,6 +11,7 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.RelativeEncoder;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -20,6 +21,8 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     private final SparkMax IntakeDeployMotor2;
     private final SparkClosedLoopController positionController;
     private final RelativeEncoder IntakeDeployEncoder;
+    private final DigitalInput lowerLimitSwitch;
+    private final DigitalInput upperLimitSwitch;
 
     public IntakeDeploySubsystem() {
         IntakeDeployMotor1 = new SparkMax(Constants.CanConstants.IntakeDeployMotor1CanID, MotorType.kBrushless);
@@ -48,12 +51,13 @@ public class IntakeDeploySubsystem extends SubsystemBase {
             .p(0.5) // Linear actuators often need a higher P than swing arms
             .outputRange(-0.6, 0.6); // Cap speed for mechanical safety
 
-        // Hardware Limit Switches
+        // We're using two magnetic limit switches wired directly to the RoboRIO DIO.
+        // Disable the motor controller's onboard limit switches to avoid conflicting behavior.
         IntakeDeployMotor1Config.limitSwitch
             .forwardLimitSwitchType(Type.kNormallyClosed)
             .reverseLimitSwitchType(Type.kNormallyClosed)
-            .forwardLimitSwitchEnabled(true)
-            .reverseLimitSwitchEnabled(true);
+            .forwardLimitSwitchEnabled(false)
+            .reverseLimitSwitchEnabled(false);
 
         // Soft Limits (Prevent over-traveling the screw/rack)
         IntakeDeployMotor1Config.softLimit
@@ -70,6 +74,10 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         IntakeDeployMotor2.configure(IntakeDeployMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         
         IntakeDeployEncoder.setPosition(0);
+
+        // Initialize DIO-connected magnetic limit switches for intake deploy
+        lowerLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kLowerLimitDIO);
+        upperLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kUpperLimitDIO);
     }
 
     /** @param inches Target extension in inches */
@@ -98,7 +106,18 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     }
 
     public boolean isReverseLimitPressed() {
-        return IntakeDeployMotor1.getReverseLimitSwitch().isPressed();
+        return isLowerSwitchActive();
+    }
+
+    /** Returns true when the lower magnetic limit switch is triggered. */
+    public boolean isLowerSwitchActive() {
+        // Invert if your sensor wiring returns false when pressed. Adjust as needed.
+        return !lowerLimitSwitch.get();
+    }
+
+    /** Returns true when the upper magnetic limit switch is triggered. */
+    public boolean isUpperSwitchActive() {
+        return !upperLimitSwitch.get();
     }
 
     public double getPosition() {
@@ -108,8 +127,12 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         SmartDashboard.putNumber("Intake/Extension Inches", IntakeDeployEncoder.getPosition());
-        
-        if (isReverseLimitPressed()) {
+        SmartDashboard.putBoolean("Intake/LowerLimit", isLowerSwitchActive());
+        SmartDashboard.putBoolean("Intake/UpperLimit", isUpperSwitchActive());
+        SmartDashboard.putNumber("IntakeDeployCurrent", IntakeDeployMotor1.getOutputCurrent());
+        // Reset encoder when lower switch is pressed AND position is near zero to avoid accidental resets.
+        double pos = IntakeDeployEncoder.getPosition();
+        if (isLowerSwitchActive() && pos < (Constants.IntakeDeploy.kMaxExtensionInches / 10.0)) {
             resetEncoder();
         }
     }
