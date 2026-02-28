@@ -7,6 +7,10 @@ package frc.robot;
 import com.pathplanner.lib.config.PIDConstants;
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.motorcontrol.Spark;
@@ -27,6 +31,10 @@ public final class Constants
   public static final Matter CHASSIS    = new Matter(new Translation3d(0, 0, Units.inchesToMeters(8)), ROBOT_MASS);
   public static final double LOOP_TIME  = 0.13; //s, 20ms + 110ms sprk max velocity lag
   public static final double MAX_SPEED  = Units.feetToMeters(15.1);
+    public static final Transform3d kRobotToCam = new Transform3d(
+    new Translation3d(Units.inchesToMeters(18), Units.inchesToMeters(-3), Units.inchesToMeters(22.5)), 
+    new Rotation3d(0, Units.degreesToRadians(0), 0)
+  );
 
   public static class DrivetrainConfig {
     public static final double MAX_DRIVE_SPEED = 10.0; // m/s
@@ -75,7 +83,7 @@ public final class Constants
     //Swerver motor 1 Front Right Neo Spark Max
     public static final int SwerveFrontRightDriveMotorCanID  = 10;
     public static final int SwerveFrontRightSteerMotorCanID  = 11;
-    public static final int CanCoderFrontRight                = 20;
+    public static final int CanCoderFrontRight               = 20;
     
     //Swerver motor 2 Back Right Neo Spark Max
     public static final int SwerveBackRightDriveMotorCanID   = 12;
@@ -97,8 +105,8 @@ public final class Constants
     public static final int FlywheelMotor2CanID              = 19;
 
     // Indexer motor Rev Neo Spark Max
-    public static final int IndexerMotorCanID                = 28;
-
+    public static final int IndexerMotor1CanID                = 28;
+    
     //Intake spin motors Vortex Spark Flex
     public static final int IntakeSpinMotor1CanID            = 24;
     public static final int IntakeSpinMotor2CanID            = 25;
@@ -110,12 +118,75 @@ public final class Constants
 
     //Hopper motor Rev Neo Spark Max 
     //**needs updated to correct CAN ID if used */
-    public static final int HopperMotorCanID                 = 01;
+    public static final int FuelAgitatorMotor1CanID           = 31;
+    public static final int FuelAgitatorMotor2CanID           = 32;
+
+    //Launcher hood motor Rev Neo Spark Max
+    public static final int LauncherHoodMotorCanID          = 30;
 
     //Climb motors Rev Neo Spark Max
-    public static final int ClimbDeployMotorCanID            = 29;
-    public static final int ClimbGoUpMotorCanID              = 30;
+    public static final int ClimbGoUpMotor1CanID              = 28;
+    //public static final int ClimbGoUpMotor2CanID              = 32;
   }
 
 
+  public static class Climber {
+    public static final double kGearRatio = 16.0;             // Example 16:1
+    public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
+    public static final double kMaxHeightInches = 18.0;      // Physical limit in inches
+    // DIO channel for the combined magnetic limit switch wired to the RoboRIO
+    public static final int kClimberLimitSwitchDIO = 0;
+  }
+
+  public static class IntakeDeploy {
+    public static final double kGearRatio = 5.0;            // Example gearbox reduction
+    public static final double kTravelPerRotation = 0.5;    // e.g., 0.5 inches per 1 rotation of the screw
+    public static final double kExtendedInches = 8.0;       // How far to push out
+    public static final double kMaxExtensionInches = 8.5;   // Physical stop
+    // DIO channels for the intake deploy lower and upper magnetic limit switches
+    public static final int kLowerLimitDIO = 1;
+    public static final int kUpperLimitDIO = 2;
+  }
+
+  public static class Launcher {
+    public static final double kHoodGearRatio = 100.0; // Example: 100:1 reduction
+    public static final double kMaxHoodAngle = 45.0;  // Maximum degrees of travel
+    public static final double kAngleFender = 10.0;   // Angle for shooting near the speaker
+    public static final double kAnglePodium = 35.0;   // Angle for shooting from further away
+  }
+
+  
+
+
+  public static final class FieldObjectLocations
+  {
+    // Robot side aliases for readability
+    public static final Rotation2d FRONT = Rotation2d.fromDegrees(0);
+    public static final Rotation2d REAR  = Rotation2d.fromDegrees(180);
+    public static final Rotation2d LEFT  = Rotation2d.fromDegrees(90);
+    public static final Rotation2d RIGHT = Rotation2d.fromDegrees(-90);
+
+    /** Helper class to store a field position and the robot side that should face it */
+    public static class FieldTarget {
+      public final Translation2d pos;
+      public final Rotation2d side;
+
+      public FieldTarget(double x, double y, Rotation2d robotSide) {
+        this.pos = new Translation2d(x, y);
+        this.side = robotSide;
+      }
+    }
+
+    // Human-readable targets
+    public static final FieldTarget BLUE_HUB      = new FieldTarget(4.6, 4, FRONT);
+    public static final FieldTarget BLUE_OUTPOST  = new FieldTarget(0.0, 0.65, FRONT);
+    public static final FieldTarget BLUE_TOWER    = new FieldTarget(0.0, 3.73, REAR);
+    public static final FieldTarget BLUE_DEPOT    = new FieldTarget(0.0, 5.9, FRONT);
+    public static final FieldTarget RED_HUB       = new FieldTarget(11.9, 4, FRONT);
+    public static final FieldTarget RED_OUTPOST   = new FieldTarget(16.5, 7.4, FRONT);
+    public static final FieldTarget RED_TOWER     = new FieldTarget(16.5, 4.3, REAR);
+    public static final FieldTarget RED_DEPOT     = new FieldTarget(16.5, 2.1, FRONT);
+
+    
+  }
 }
