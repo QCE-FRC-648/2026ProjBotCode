@@ -101,8 +101,8 @@ public final class Constants
     public static final int CanCoderFrontLeft                = 23;
 
     //Flywheel motors Vortex Spark Flex
-    public static final int FlywheelMotor1CanID              = 18;
-    public static final int FlywheelMotor2CanID              = 19;
+    public static final int FlywheelMotor1CanID              = 19;
+    public static final int FlywheelMotor2CanID              = 18;
 
     // Indexer motor Rev Neo Spark Max
     public static final int IndexerMotor1CanID                = 28;
@@ -125,7 +125,7 @@ public final class Constants
     public static final int LauncherHoodMotorCanID          = 30;
 
     //Climb motors Rev Neo Spark Max
-    public static final int ClimbGoUpMotor1CanID              = 28;
+    public static final int ClimbGoUpMotor1CanID              = 29;
     //public static final int ClimbGoUpMotor2CanID              = 32;
   }
 
@@ -133,7 +133,7 @@ public final class Constants
   public static class Climber {
     public static final double kGearRatio = 16.0;             // Example 16:1
     public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
-    public static final double kMaxHeightInches = 18.0;      // Physical limit in inches
+    public static final double kMaxHeightInches = 8.0;      // Physical limit in inches
     // DIO channel for the combined magnetic limit switch wired to the RoboRIO
     public static final int kClimberLimitSwitchDIO = 0;
   }
@@ -141,18 +141,34 @@ public final class Constants
   public static class IntakeDeploy {
     public static final double kGearRatio = 5.0;            // Example gearbox reduction
     public static final double kTravelPerRotation = 0.5;    // e.g., 0.5 inches per 1 rotation of the screw
-    public static final double kExtendedInches = 8.0;       // How far to push out
-    public static final double kMaxExtensionInches = 8.5;   // Physical stop
+    public static final double kExtendedInches = 10.0;       // How far to push out
+    public static final double kMaxExtensionInches = 10.0;   // Physical stop
     // DIO channels for the intake deploy lower and upper magnetic limit switches
     public static final int kLowerLimitDIO = 1;
     public static final int kUpperLimitDIO = 2;
   }
 
   public static class Launcher {
-    public static final double kHoodGearRatio = 100.0; // Example: 100:1 reduction
-    public static final double kMaxHoodAngle = 45.0;  // Maximum degrees of travel
+    public static final double kHoodGearRatio = 72.84; // Example: 100:1 reduction
+    public static final double kMaxHoodAngle = 300.0;  // Maximum degrees of travel
+  // Minimum degrees of travel for the hood (safe stow / mechanical stop)
+  public static final double kMinHoodAngle = 5.0;
+  // Maximum hood angular speed (degrees per second) when moving to a new position
+  public static final double kMaxHoodSpeedDegPerSec = 5.0;
     public static final double kAngleFender = 10.0;   // Angle for shooting near the speaker
     public static final double kAnglePodium = 35.0;   // Angle for shooting from further away
+    // Safe maximum RPM for launcher during tuning and runtime clamping
+    public static final double kMaxSafeRpm = 3000.0;
+  }
+
+  public static class Indexer {
+    // Safe maximum RPM for indexer
+    public static final double kMaxSafeRpm = 3000.0;
+  }
+
+  public static class Agitator {
+    // Safe maximum RPM for agitator
+    public static final double kMaxSafeRpm = 3000.0;
   }
 
   

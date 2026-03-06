@@ -33,9 +33,11 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         SparkMaxConfig IntakeDeployMotor1Config = new SparkMaxConfig();
         SparkMaxConfig IntakeDeployMotor2Config = new SparkMaxConfig();
 
-        // --- LINEAR CONVERSION (INCHES) ---
-        // Converts 1 motor rotation into inches of linear travel
-        double conversionFactor = Constants.IntakeDeploy.kTravelPerRotation / Constants.IntakeDeploy.kGearRatio;
+    // --- LINEAR CONVERSION (INCHES) ---
+    // Converts 1 motor rotation into inches of linear travel.
+    // Spark hardware requires a positive position conversion factor; use
+    // absolute value here to avoid invalid-parameter errors at configure().
+    double conversionFactor = Math.abs(Constants.IntakeDeploy.kTravelPerRotation / Constants.IntakeDeploy.kGearRatio);
         
         IntakeDeployMotor1Config.encoder
             .positionConversionFactor(conversionFactor)
@@ -44,12 +46,14 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         // Leader Config
         IntakeDeployMotor1Config
             .idleMode(IdleMode.kBrake)
+            .inverted(true)
             .smartCurrentLimit(40);
 
         // Position PID (Tuned for Inches)
         IntakeDeployMotor1Config.closedLoop
             .p(0.5) // Linear actuators often need a higher P than swing arms
-            .outputRange(-0.6, 0.6); // Cap speed for mechanical safety
+            // Reduce closed-loop maximum by 25% (was +/-0.6)
+            .outputRange(-0.3, 0.3); // Cap speed for mechanical safety
 
         // We're using two magnetic limit switches wired directly to the RoboRIO DIO.
         // Disable the motor controller's onboard limit switches to avoid conflicting behavior.
@@ -64,14 +68,19 @@ public class IntakeDeploySubsystem extends SubsystemBase {
             .forwardSoftLimitEnabled(true)
             .forwardSoftLimit(Constants.IntakeDeploy.kMaxExtensionInches);
 
-        // Follower Config
+        // Follower Config: configure motor2 to follow motor1 (mirrored)
         IntakeDeployMotor2Config
             .idleMode(IdleMode.kBrake)
-            .follow(IntakeDeployMotor1, true); 
+            .follow(IntakeDeployMotor1, true);
 
         // Apply Configurations
         IntakeDeployMotor1.configure(IntakeDeployMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         IntakeDeployMotor2.configure(IntakeDeployMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+    // NOTE: We reversed the encoder conversion factor above and will invert
+    // manual power commands so that both closed-loop and open-loop control
+    // move the mechanism in the expected (reversed) direction without
+    // relying on deprecated motor inversion APIs.
         
         IntakeDeployEncoder.setPosition(0);
 
@@ -94,7 +103,10 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     }
 
     public void runAtPower(double power) {
-        IntakeDeployMotor1.set(power);
+        // Flip sign so manual power matches the new encoder direction.
+        // Scale manual open-loop power down by 25% (i.e., run at 75% commanded).
+        double cmd = -power * 0.75;
+        IntakeDeployMotor1.set(cmd);
     }
 
     public void stopPivot() {

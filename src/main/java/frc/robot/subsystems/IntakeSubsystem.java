@@ -39,7 +39,8 @@ public class IntakeSubsystem extends SubsystemBase {
             .idleMode(IdleMode.kCoast)
             .smartCurrentLimit(40)
             .openLoopRampRate(.25)
-            .closedLoopRampRate(.25);
+            .closedLoopRampRate(.25)
+            .inverted(true);
 
         IntakeSpinMotor2Config
             .idleMode(IdleMode.kCoast)

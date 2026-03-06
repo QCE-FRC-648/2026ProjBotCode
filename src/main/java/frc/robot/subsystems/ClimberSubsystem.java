@@ -23,8 +23,6 @@ public class ClimberSubsystem extends SubsystemBase {
     private final RelativeEncoder encoder;
     private final DigitalInput combinedLimitSwitch;
 
-    private double targetPosition = 0;
-
     public ClimberSubsystem() {
         ClimberMotor1 = new SparkMax(Constants.CanConstants.ClimbGoUpMotor1CanID, MotorType.kBrushless);
         //ClimberMotor2 = new SparkMax(Constants.CanConstants.ClimbGoUpMotor2CanID, MotorType.kBrushless);
@@ -86,7 +84,6 @@ public class ClimberSubsystem extends SubsystemBase {
 
     /** @param inches Target height in inches */
     public void setHeight(double inches) {
-        targetPosition = inches;
         controller.setReference(inches, SparkMax.ControlType.kPosition);
     }
 
@@ -128,20 +125,17 @@ public class ClimberSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Climber/Position Inches", encoder.getPosition());
         SmartDashboard.putBoolean("Climber/At Bottom", isAtBottom());
         SmartDashboard.putNumber("ClimberCurrent", ClimberMotor1.getOutputCurrent());
-
-        // Zeroing logic: only reset encoder when the switch is active and the
-        // encoder reports a position near the lower part of travel to avoid
-        // accidental resets when at the top hitting a different magnetic.
-        double pos = encoder.getPosition();
-        if (isSwitchActive() && pos < (Constants.Climber.kMaxHeightInches / 2.0)) {
+        // Bottom-mounted limit switch: reset encoder whenever the bottom
+        // switch is active (we're physically at the lower stop).
+        if (isSwitchActive()) {
             resetEncoder();
         }
     }
 
     /** Pulls the climber down (toward 0) with safety checks */
     public void pullDown(double speed) {
-        // When switch is active and we are very near bottom, stop
-        if (isSwitchActive() && encoder.getPosition() < (Constants.Climber.kMaxHeightInches / 2.0)) {
+        // If bottom switch is triggered, stop. Otherwise move downward.
+        if (isSwitchActive()) {
             ClimberMotor1.stopMotor();
         } else {
             ClimberMotor1.set(Math.abs(speed));
@@ -150,11 +144,8 @@ public class ClimberSubsystem extends SubsystemBase {
 
     /** Releases the climber up (away from 0) with safety checks */
     public void release(double speed) {
-        // When switch is active and encoder indicates we are near the top, stop
-        if (isSwitchActive() && encoder.getPosition() > (Constants.Climber.kMaxHeightInches / 2.0)) {
-            ClimberMotor1.stopMotor();
-        } else {
-            ClimberMotor1.set(-Math.abs(speed));
-        }
+        // Upward motion: respect motor/controller soft limits; do not stop on
+        // the bottom switch because we are moving away from it.
+        ClimberMotor1.set(-Math.abs(speed));
     }
 }
