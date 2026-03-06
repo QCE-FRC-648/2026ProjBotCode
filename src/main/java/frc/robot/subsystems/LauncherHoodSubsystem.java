@@ -16,6 +16,7 @@ import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -24,7 +25,10 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     private final SparkAbsoluteEncoder m_encoder;
     private final SparkClosedLoopController m_controller;
     private double m_targetAngleDeg = 0.0;
-    private static final double kAngleToleranceDeg = 1.0;
+    // The angle requested by callers; we will ramp m_targetAngleDeg toward this at a limited rate
+    private double m_requestedAngleDeg = 0.0;
+    private double m_lastTimestamp = 0.0;
+    private static final double kAngleToleranceDeg = 3.0;
 
     private final InterpolatingDoubleTreeMap m_angleTable = new InterpolatingDoubleTreeMap();
 
@@ -49,6 +53,11 @@ public class LauncherHoodSubsystem extends SubsystemBase {
             .p(0.05);
 
         m_motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+        // Initialize target/request to current encoder reading
+        m_targetAngleDeg = m_encoder.getPosition();
+        m_requestedAngleDeg = m_targetAngleDeg;
+        m_lastTimestamp = Timer.getFPGATimestamp();
     }
 
     private void setupInterpolationTable() {
@@ -64,9 +73,8 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     }
 
     public void setAngle(double degrees) {
-        m_targetAngleDeg = MathUtil.clamp(degrees, 0.0, Constants.Launcher.kMaxHoodAngle);
-        // Use SparkMax.ControlType for the reference
-        m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+        // Record requested angle (clamped). periodic() will ramp the commanded target toward this value
+        m_requestedAngleDeg = MathUtil.clamp(degrees, Constants.Launcher.kMinHoodAngle, Constants.Launcher.kMaxHoodAngle);
     }
 
     public void stop() {
@@ -83,8 +91,22 @@ public class LauncherHoodSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
+        double now = Timer.getFPGATimestamp();
+        double dt = Math.max(1e-6, now - m_lastTimestamp);
+        m_lastTimestamp = now;
+
+        // Rate-limit how quickly the commanded position moves toward the requested position
+        double maxDelta = Constants.Launcher.kMaxHoodSpeedDegPerSec * dt;
+        double newTarget = MathUtil.clamp(m_requestedAngleDeg, m_targetAngleDeg - maxDelta, m_targetAngleDeg + maxDelta);
+        m_targetAngleDeg = newTarget;
+
+        // Send the (rate-limited) position reference to the controller
+        m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+
         SmartDashboard.putNumber("Launcher/Hood Angle", getAngle());
         SmartDashboard.putNumber("Launcher/Hood Target Angle", m_targetAngleDeg);
+        SmartDashboard.putNumber("Launcher/Hood Requested Angle", m_requestedAngleDeg);
+        SmartDashboard.putNumber("Launcher/Hood MaxSpeedDegPerSec", Constants.Launcher.kMaxHoodSpeedDegPerSec);
         SmartDashboard.putBoolean("Launcher/Hood At Target", isAtTarget());
     }
 }

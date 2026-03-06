@@ -10,6 +10,8 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.RelativeEncoder;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.math.filter.SlewRateLimiter;
+ 
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
@@ -48,12 +50,24 @@ public class FuelAgitatorSubsystem extends SubsystemBase {
 
     /** @param rpm Target velocity in RPM */
     public void setVelocity(double rpm) {
-        m_controller.setReference(rpm, SparkMax.ControlType.kVelocity);
+        double max = Constants.Agitator.kMaxSafeRpm;
+        double clamped = Math.signum(rpm) * Math.min(Math.abs(rpm), max);
+        // store desired target and ramp in periodic
+        this.desiredTargetRPM = clamped;
     }
 
     public void stop() {
-        m_motor.stopMotor();
+        this.desiredTargetRPM = 0; // Essential: Stops the ramp logic in periodic
+        this.appliedTargetRPM = 0;
+        rpmSlew.reset(0);           // Clear the limiter's memory
+        m_motor.stopMotor();       // Immediate hardware cut
+    
     }
+
+    // Ramp helpers
+    private final SlewRateLimiter rpmSlew = new SlewRateLimiter(1000.0);
+    private double desiredTargetRPM = 0.0;
+    private double appliedTargetRPM = 0.0;
 
     // Inside FuelAgitatorSubsystem.java
 
@@ -67,6 +81,23 @@ public class FuelAgitatorSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
+        // Ramp and apply desired RPM to avoid sudden current spikes
+        double next = rpmSlew.calculate(desiredTargetRPM);
+
+        // GUARD CLAUSE:
+        // If the target is 0, don't let the PID re-enable the motor.
+        if (desiredTargetRPM == 0) {
+            m_motor.stopMotor();
+        } else {
+            // Only update the controller if the value has changed significantly
+            if (Math.abs(next - appliedTargetRPM) > 0.5) {
+                m_controller.setReference(next, SparkMax.ControlType.kVelocity);
+                appliedTargetRPM = next;
+            }
+        }
+
+        SmartDashboard.putNumber("Agitator/Requested RPM", desiredTargetRPM);
+        SmartDashboard.putNumber("Agitator/Applied RPM", appliedTargetRPM);
         SmartDashboard.putNumber("Agitator/RPM", m_encoder.getVelocity());
     }
 }

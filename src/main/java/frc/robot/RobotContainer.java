@@ -127,7 +127,7 @@ public class RobotContainer
     NamedCommands.registerCommand("IntakeExtend", new InstantCommand(m_intakeDeploy::extend));
     NamedCommands.registerCommand("IntakeRetract", new InstantCommand(m_intakeDeploy::retract));
     NamedCommands.registerCommand("LaunchPrep", new InstantCommand(() ->
-      m_launcher.setVelocity(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault))));
+      m_launcher.setVelocity(MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm))));
     NamedCommands.registerCommand("ClimbUp", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
     NamedCommands.registerCommand("ClimbDown", new InstantCommand(() -> m_climber.setHeight(0)));
     NamedCommands.registerCommand("AgitateFuel", new SmartAgitateCommand(m_fuelAgitator));
@@ -182,6 +182,10 @@ public class RobotContainer
    * controllers or {@link edu.wpi.first.wpilibj2.command.button.CommandJoystick Flight joysticks}.
    */
   private void configureBindings() {
+
+    m_launcher.setDefaultCommand(new RunCommand(m_launcher::stop, m_launcher));
+m_indexer.setDefaultCommand(new RunCommand(m_indexer::stop, m_indexer));
+m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgitator));
     // Operator: Manual climber control (left stick up/down)
 
     boolean isRed = DriverStation.getAlliance().isPresent() && 
@@ -193,7 +197,7 @@ public class RobotContainer
     Constants.FieldObjectLocations.FieldTarget depot = isRed ? Constants.FieldObjectLocations.RED_DEPOT : Constants.FieldObjectLocations.BLUE_DEPOT;
 
    
-
+    
     // Aim the robot at the scoring station using the target constant
     driverController.rightTrigger().whileTrue(
         driveTrain.driveAndAim(driveAngularVelocity, hub));
@@ -219,6 +223,25 @@ public class RobotContainer
       m_climber.runManual(speed);
     }, m_climber));
 
+    // Intake deploy: manual control using operator right stick X (left/right).
+    // Pushing right -> extend, left -> retract. Applies safety stops using
+    // the DIO-mounted limit switches on the intake deploy subsystem.
+    m_intakeDeploy.setDefaultCommand(new RunCommand(() -> {
+      double speed = MathUtil.applyDeadband(operatorController.getRightX(), OperatorConstants.RIGHT_X_DEADBAND);
+
+      // If lower (retracted) limit is hit and driver requests further retract, stop.
+      if (m_intakeDeploy.isLowerSwitchActive() && speed < 0) {
+        speed = 0;
+      }
+
+      // If we're at or past the maximum extension and driver requests more extend, stop.
+      if (m_intakeDeploy.getPosition() >= Constants.IntakeDeploy.kMaxExtensionInches && speed > 0) {
+        speed = 0;
+      }
+
+      m_intakeDeploy.runAtPower(speed);
+    }, m_intakeDeploy));
+
     // Operator: Manual Homing (Emergency/Reset)
     operatorController.start().whileTrue(new IntakeHomingCommand(m_intakeDeploy).withTimeout(2.0));
     operatorController.back().whileTrue(new ClimberHomingCommand(m_climber).withTimeout(2.0));
@@ -226,28 +249,66 @@ public class RobotContainer
     // Operator: Intake Control
     operatorController.rightBumper().onTrue(new InstantCommand(m_intakeDeploy::extend));
     operatorController.leftBumper().onTrue(new InstantCommand(m_intakeDeploy::retract));
-    operatorController.x().whileTrue(new RunCommand(() ->
+
+    // Intake spin: Right trigger spins the intake forward at the tuned RPM.
+    // Left trigger spins the intake in reverse at a reduced magnitude for safety.
+    // Reverse is intentionally scaled to 50% to reduce mechanical stress and
+    // avoid ejecting game pieces violently. Adjust the scale as needed.
+    //intake
+    operatorController.rightTrigger().whileTrue(new RunCommand(() ->
       m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake))
+      .onFalse(new InstantCommand(m_intake::stop));
+    //extract
+    operatorController.leftTrigger().whileTrue(new RunCommand(() ->
+      m_intake.setVelocity(-0.5 * getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake))
       .onFalse(new InstantCommand(m_intake::stop));
 
     // Operator: Launcher Control (Hold A to spin up)
-    operatorController.a().whileTrue(new RunCommand(() ->
-      m_launcher.setVelocity(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault)), m_launcher))
-                         .onFalse(new InstantCommand(m_launcher::stop));
+    // Create reusable RunCommand instances so the command lifecycle (and finallyDo) is consistent
+    Command launcherHold = new RunCommand(() ->
+      m_launcher.setVelocity(MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm)), m_launcher)
+        .finallyDo(interrupted -> m_launcher.stop());
 
-    operatorController.b().whileTrue(new SmartAgitateCommand(m_fuelAgitator));
+    // Operator: Individual mechanism manual spin
+    // B -> spin the INDEXER at the tuned indexer RPM while held
+    Command indexerHold = new RunCommand(() ->
+      m_indexer.setVelocity(MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm)), m_indexer)
+        .finallyDo(interrupted -> m_indexer.stop());
+
+    // X -> spin the FUEL AGITATOR at the tuned agitator RPM while held
+    Command agitatorHold = new RunCommand(() ->
+      m_fuelAgitator.setVelocity(MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)), m_fuelAgitator)
+        .finallyDo(interrupted -> m_fuelAgitator.stop());
+
+    // Bind the triggers to the reusable commands (hold-to-run)
+    operatorController.a().whileTrue(launcherHold).onFalse(new InstantCommand(m_launcher::stop,m_launcher));
+    operatorController.b().whileTrue(indexerHold).onFalse(new InstantCommand(m_indexer::stop,m_indexer));
+    operatorController.x().whileTrue(agitatorHold).onFalse(new InstantCommand(m_fuelAgitator::stop,m_fuelAgitator));
+
+  // Debugging: log press/release events for A/B/X to help diagnose toggle-like behavior
+  operatorController.a().onTrue(new InstantCommand(() -> DriverStation.reportWarning("Operator A pressed", false)));
+  operatorController.a().onFalse(new InstantCommand(() -> DriverStation.reportWarning("Operator A released", false)));
+
+  operatorController.b().onTrue(new InstantCommand(() -> DriverStation.reportWarning("Operator B pressed", false)));
+  operatorController.b().onFalse(new InstantCommand(() -> DriverStation.reportWarning("Operator B released", false)));
+
+  operatorController.x().onTrue(new InstantCommand(() -> DriverStation.reportWarning("Operator X pressed", false)));
+  operatorController.x().onFalse(new InstantCommand(() -> DriverStation.reportWarning("Operator X released", false)));
+
+    //operatorController.b().whileTrue(new SmartAgitateCommand(m_fuelAgitator));
 
   // Operator: Spin up launcher, then feed indexer + agitator
-    operatorController.y().whileTrue(
+  /*  operatorController.y().whileTrue(
       new SpinUpAndFeedCommand(
         m_launcher,
         m_indexer,
         m_fuelAgitator,
-        () -> getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault),
-        () -> getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault),
-        () -> getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault)));
-
+        () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
+        () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
+        () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)));
+*/
     // Operator: Auto-aim hood + spin up + feed (default hub)
+    /*
     operatorController.rightTrigger().whileTrue(
       new AutoAimSpinUpAndFeedCommand(
         m_launcher,
@@ -271,12 +332,21 @@ public class RobotContainer
         () -> getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault),
         () -> getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault),
         new Translation2d(2.0, 2.0)));
-  
+    */
     // Use D-Pad for quick angle presets
-    operatorController.povUp().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAnglePodium)));
-    operatorController.povDown().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAngleFender)));
-    operatorController.povLeft().onTrue(new InstantCommand(() -> m_hood.setAngle(0))); // Stowed
+    //operatorController.povUp().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAnglePodium)));
+    //operatorController.povDown().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAngleFender)));
+    //operatorController.povLeft().onTrue(new InstantCommand(() -> m_hood.setAngle(0))); // Stowed
+    // step in degrees for each POV press
+    double hoodStepDeg = 2.0;
 
+    // Increase hood angle on POV up
+    operatorController.povUp().onTrue(
+      new InstantCommand(() -> m_hood.setAngle(m_hood.getAngle() + hoodStepDeg)));
+
+    // Decrease hood angle on POV down
+    operatorController.povDown().onTrue(
+      new InstantCommand(() -> m_hood.setAngle(m_hood.getAngle() - hoodStepDeg)));
   }
 
   private void initTuningDashboard() {
@@ -312,7 +382,7 @@ public class RobotContainer
   public Command getAutonomousCommand() {
     // This creates a sequence that HOMES first, then runs the PathPlanner Auto
     return new SequentialCommandGroup(
-        getHomingSequence(),
+        //getHomingSequence(),
         autoChooser.getSelected()
     );
   }
