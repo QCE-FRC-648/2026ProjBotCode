@@ -11,7 +11,6 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.RelativeEncoder;
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;;
 
@@ -22,10 +21,6 @@ public class IndexerSubsystem extends SubsystemBase {
     private final RelativeEncoder indexerEncoder;
 
     private double targetRPM = 0;
-    // Ramp helper
-    private final SlewRateLimiter rpmSlew = new SlewRateLimiter(1000.0);
-    private double desiredTargetRPM = 0.0;
-    private double appliedTargetRPM = 0.0;
 
     public IndexerSubsystem() {
         // Initialize the Spark Flex / Vortex
@@ -55,42 +50,18 @@ public class IndexerSubsystem extends SubsystemBase {
      * Set the indexer to a specific RPM.
      */
     public void setVelocity(double rpm) {
-        double max = Constants.Indexer.kMaxSafeRpm;
-        double clamped = Math.signum(rpm) * Math.min(Math.abs(rpm), max);
-        this.targetRPM = clamped;
-        this.desiredTargetRPM = clamped;
+        this.targetRPM = rpm;
+        velocityController.setReference(rpm, ControlType.kVelocity);
     }
-    /**
-     * Set the indexer to a specific RPM.
-     */
 
     public void stop() {
         this.targetRPM = 0;
-        this.desiredTargetRPM = 0; // Tell periodic() to stop the PID loop
-        this.appliedTargetRPM = 0;
-        rpmSlew.reset(0);           // Clear the ramp "memory"
-        indexerMotor.stopMotor();  // Immediate hardware stop
+        indexerMotor.stopMotor();
     }
 
     @Override
     public void periodic() {
-        // Calculate what the ramped speed should be
-        double next = rpmSlew.calculate(desiredTargetRPM);
-        
-        // GUARD CLAUSE: 
-        // If we want 0 RPM, force a stop. Otherwise, update the PID controller.
-        if (desiredTargetRPM == 0) {
-            indexerMotor.stopMotor();
-        } else {
-            // Only update the motor controller if the ramped value has changed significantly
-            if (Math.abs(next - appliedTargetRPM) > 0.5) {
-                velocityController.setReference(next, ControlType.kVelocity);
-                appliedTargetRPM = next;
-            }
-        }
-
         SmartDashboard.putNumber("Indexer/Actual RPM", indexerEncoder.getVelocity());
         SmartDashboard.putNumber("Indexer/Target RPM", targetRPM);
-        SmartDashboard.putNumber("Indexer/Applied RPM", appliedTargetRPM);
     }
 }
