@@ -116,7 +116,7 @@ public final class Constants
     public static final int IntakeDeployMotor1CanID          = 26;
     public static final int IntakeDeployMotor2CanID          = 27;
 
-    //Hopper motor Rev Neo Spark Max 
+    //Hopper motor Rev Neo SparkMax 
     //**needs updated to correct CAN ID if used */
     public static final int FuelAgitatorMotor1CanID           = 31;
     public static final int FuelAgitatorMotor2CanID           = 32;
