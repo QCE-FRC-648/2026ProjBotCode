@@ -133,7 +133,7 @@ public final class Constants
   public static class Climber {
     public static final double kGearRatio = 16.0;             // Example 16:1
     public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
-    public static final double kMaxHeightInches = 8.0;      // Physical limit in inches
+    public static final double kMaxHeightInches = 17.0;      // Physical limit in inches
     // DIO channel for the combined magnetic limit switch wired to the RoboRIO
     public static final int kClimberLimitSwitchDIO = 0;
   }
@@ -163,7 +163,7 @@ public final class Constants
 
   public static class Indexer {
     // Safe maximum RPM for indexer
-    public static final double kMaxSafeRpm = 3000.0;
+    public static final double kMaxSafeRpm = 4000.0;
   }
 
   public static class Agitator {
