@@ -21,7 +21,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class LauncherHoodSubsystem extends SubsystemBase {
-    private final SparkMax m_motor;
+     private final SparkMax m_motor;
     private final SparkAbsoluteEncoder m_encoder;
     private final SparkClosedLoopController m_controller;
     private double m_targetAngleDeg = 0.0;
