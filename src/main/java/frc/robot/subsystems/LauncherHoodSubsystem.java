@@ -21,7 +21,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class LauncherHoodSubsystem extends SubsystemBase {
- /*    private final SparkMax m_motor;
+     private final SparkMax m_motor;
     private final SparkAbsoluteEncoder m_encoder;
     private final SparkClosedLoopController m_controller;
     private double m_targetAngleDeg = 0.0;
@@ -108,5 +108,5 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Launcher/Hood Requested Angle", m_requestedAngleDeg);
         SmartDashboard.putNumber("Launcher/Hood MaxSpeedDegPerSec", Constants.Launcher.kMaxHoodSpeedDegPerSec);
         SmartDashboard.putBoolean("Launcher/Hood At Target", isAtTarget());
-    }*/
+    }
 }
