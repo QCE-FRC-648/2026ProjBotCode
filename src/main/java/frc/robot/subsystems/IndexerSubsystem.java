@@ -1,12 +1,14 @@
 package frc.robot.subsystems;
 
 import com.revrobotics.spark.SparkFlex;
+import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkBase.PersistMode;
 import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkBase.ControlType;
 import com.revrobotics.spark.config.SparkFlexConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.RelativeEncoder;
 
@@ -16,21 +18,21 @@ import frc.robot.Constants;;
 
 public class IndexerSubsystem extends SubsystemBase {
 
-    private final SparkFlex indexerMotor;
+    private final SparkMax indexerMotor;
     private final SparkClosedLoopController velocityController;
     private final RelativeEncoder indexerEncoder;
 
     private double targetRPM = 0;
 
     public IndexerSubsystem() {
-        // Initialize the Spark Flex / Vortex
-        indexerMotor = new SparkFlex(Constants.CanConstants.IndexerMotor1CanID, MotorType.kBrushless);
+        // Initialize the SparkMax
+        indexerMotor = new SparkMax(Constants.CanConstants.IndexerMotor1CanID, MotorType.kBrushless);
 
         velocityController = indexerMotor.getClosedLoopController();
         indexerEncoder = indexerMotor.getEncoder();
 
-        // 2026.0.1 Config Object for Spark Flex
-        SparkFlexConfig indexerConfig = new SparkFlexConfig();
+        // 2026.0.1 Config Object for SparkMax
+        SparkMaxConfig indexerConfig = new SparkMaxConfig();
 
         // Configure Motor Settings
         indexerConfig

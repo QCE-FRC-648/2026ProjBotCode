@@ -58,6 +58,7 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         m_targetAngleDeg = m_encoder.getPosition();
         m_requestedAngleDeg = m_targetAngleDeg;
         m_lastTimestamp = Timer.getFPGATimestamp();
+        m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
     }
 
     private void setupInterpolationTable() {
