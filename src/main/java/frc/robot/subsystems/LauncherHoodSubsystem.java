@@ -29,6 +29,7 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     private double m_requestedAngleDeg = 0.0;
     private double m_lastTimestamp = 0.0;
     private static final double kAngleToleranceDeg = 3.0;
+    private boolean m_isActive = true;
 
     private final InterpolatingDoubleTreeMap m_angleTable = new InterpolatingDoubleTreeMap();
 
@@ -41,9 +42,16 @@ public class LauncherHoodSubsystem extends SubsystemBase {
 
         SparkMaxConfig config = new SparkMaxConfig();
         
+        config.softLimit
+            .forwardSoftLimit(Constants.Launcher.kMaxHoodAngle)
+            .forwardSoftLimitEnabled(true)
+            .reverseSoftLimit(Constants.Launcher.kMinHoodAngle)
+            .reverseSoftLimitEnabled(true);
+
         config.absoluteEncoder
             .positionConversionFactor(360.0)
-            .velocityConversionFactor(360.0 / 60.0);
+            .velocityConversionFactor(360.0 / 60.0)
+            .inverted(true);
 
         config.idleMode(IdleMode.kBrake);
 
@@ -58,6 +66,9 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         m_targetAngleDeg = m_encoder.getPosition();
         m_requestedAngleDeg = m_targetAngleDeg;
         m_lastTimestamp = Timer.getFPGATimestamp();
+    // Immediately tell the controller that the current position is the reference so
+    // it does not try to move the hood when the robot is enabled.
+    m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
     }
 
     private void setupInterpolationTable() {
@@ -73,11 +84,12 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     }
 
     public void setAngle(double degrees) {
-        // Record requested angle (clamped). periodic() will ramp the commanded target toward this value
+        m_isActive = true; // Re-enable control when a new angle is requested
         m_requestedAngleDeg = MathUtil.clamp(degrees, Constants.Launcher.kMinHoodAngle, Constants.Launcher.kMaxHoodAngle);
     }
 
     public void stop() {
+        m_isActive = false; // Tells periodic to stop sending PID commands
         m_motor.stopMotor();
     }
 
@@ -95,13 +107,20 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         double dt = Math.max(1e-6, now - m_lastTimestamp);
         m_lastTimestamp = now;
 
-        // Rate-limit how quickly the commanded position moves toward the requested position
+        // 1. Calculate the rate-limited target
         double maxDelta = Constants.Launcher.kMaxHoodSpeedDegPerSec * dt;
-        double newTarget = MathUtil.clamp(m_requestedAngleDeg, m_targetAngleDeg - maxDelta, m_targetAngleDeg + maxDelta);
-        m_targetAngleDeg = newTarget;
+        m_targetAngleDeg = MathUtil.clamp(m_requestedAngleDeg, m_targetAngleDeg - maxDelta, m_targetAngleDeg + maxDelta);
 
-        // Send the (rate-limited) position reference to the controller
-        m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+        // 2. THE GUARD CLAUSE
+        if (!m_isActive) {
+            m_motor.stopMotor();
+            // Sync target so it doesn't "snap" back when re-enabled
+            m_targetAngleDeg = getAngle(); 
+            m_requestedAngleDeg = getAngle();
+        } else {
+            // Only command the motor if we are active
+            m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+        }
 
         SmartDashboard.putNumber("Launcher/Hood Angle", getAngle());
         SmartDashboard.putNumber("Launcher/Hood Target Angle", m_targetAngleDeg);
