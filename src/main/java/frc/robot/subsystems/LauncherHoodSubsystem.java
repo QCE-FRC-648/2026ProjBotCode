@@ -93,6 +93,19 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         m_motor.stopMotor();
     }
 
+    /**
+     * Sync the internal expected/requested positions to the current encoder reading and
+     * update the controller reference so the hood does not move unexpectedly when enabled.
+     * Call this during robot enable (teleop/auton/test) or after any encoder reset.
+     */
+    public void syncToEncoder() {
+        double pos = getAngle();
+        m_targetAngleDeg = pos;
+        m_requestedAngleDeg = pos;
+        // Update controller reference to current position to prevent immediate motion
+        m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+    }
+
     public double getAngle() {
         return m_encoder.getPosition();
     }
