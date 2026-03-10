@@ -150,7 +150,7 @@ public final class Constants
 
   public static class Launcher {
     public static final double kHoodGearRatio = 72.84; // Example: 100:1 reduction
-    public static final double kMaxHoodAngle = 100.0;  // Maximum degrees of travel
+    public static final double kMaxHoodAngle = 87.0;  // Maximum degrees of travel
   // Minimum degrees of travel for the hood (safe stow / mechanical stop)
   public static final double kMinHoodAngle = 5.0;
   // Maximum hood angular speed (degrees per second) when moving to a new position

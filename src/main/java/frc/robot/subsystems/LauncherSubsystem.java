@@ -33,7 +33,7 @@ public class LauncherSubsystem extends SubsystemBase {
     private SparkFlexConfig flywheelMotor1Config = new SparkFlexConfig();
     private SparkFlexConfig flywheelMotor2Config = new SparkFlexConfig();
     // Live-tuning cache
-    private double m_lastP = 0.0001;
+    private double m_lastP = 0.005;
     private double m_lastFF = 0.00017;
     private double m_lastD = 0.05;
 
