@@ -306,7 +306,7 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
     //operatorController.b().whileTrue(new SmartAgitateCommand(m_fuelAgitator));
 
   // Operator: Spin up launcher, then feed indexer + agitator
-   operatorController.y().whileTrue(
+  /*  operatorController.y().whileTrue(
       new SpinUpAndFeedCommand(
         m_launcher,
         m_indexer,
@@ -314,7 +314,7 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
         () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
         () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
         () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)));
-
+*/
     // Operator: Auto-aim hood + spin up + feed (default hub)
     /*
     operatorController.rightTrigger().whileTrue(
