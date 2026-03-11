@@ -42,7 +42,7 @@ public class FuelAgitatorSubsystem extends SubsystemBase {
         followerConfig
             .idleMode(IdleMode.kCoast)
             .smartCurrentLimit(30)
-            .follow(m_motor, true);
+            .follow(m_motor, false);
 
         m_motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         m_motor2.configure(followerConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);

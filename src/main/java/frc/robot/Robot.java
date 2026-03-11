@@ -109,6 +109,9 @@ public class Robot extends TimedRobot
     m_robotContainer.setMotorBrake(true);
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
+    // Sync hood position to current encoder reading to avoid unwanted motion on enable
+    m_robotContainer.syncHoodPosition();
+
     
 
     // schedule the autonomous command (example)
@@ -142,6 +145,8 @@ public class Robot extends TimedRobot
     {
       CommandScheduler.getInstance().cancelAll();
     }
+    // Sync hood position to current encoder reading to avoid unwanted motion on enable
+    m_robotContainer.syncHoodPosition();
   }
 
   /**
@@ -157,6 +162,8 @@ public class Robot extends TimedRobot
   {
     // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
+    // Sync hood position when entering test mode
+    m_robotContainer.syncHoodPosition();
   }
 
   /**
