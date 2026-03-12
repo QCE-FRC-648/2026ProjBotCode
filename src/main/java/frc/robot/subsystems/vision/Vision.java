@@ -69,7 +69,7 @@ public class Vision extends SubsystemBase {
     }
     this.photonPoseEstimator = tmp;
   }
-/*
+
   @Override
   @SuppressWarnings("unchecked")
   public void periodic() {
@@ -135,5 +135,5 @@ public class Vision extends SubsystemBase {
       });
     }
   }
-*/
+
 }

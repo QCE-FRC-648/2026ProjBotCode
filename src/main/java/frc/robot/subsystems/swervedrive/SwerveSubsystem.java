@@ -30,6 +30,7 @@ import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -131,7 +132,14 @@ public class SwerveSubsystem extends SubsystemBase
   @Override
   public void periodic()
   {
-   
+    // Publish heading telemetry for debugging: odometry heading and pose heading
+    try {
+      SmartDashboard.putNumber("IMU/HeadingDeg", getHeading().getDegrees());
+      SmartDashboard.putNumber("IMU/HeadingRad", getHeading().getRadians());
+      SmartDashboard.putNumber("IMU/PoseHeadingDeg", getPose().getRotation().getDegrees());
+    } catch (Exception ignored) {
+      // Avoid throwing during periodic if telemetry fails for any reason
+    }
   }
 
   @Override

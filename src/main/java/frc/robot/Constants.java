@@ -133,7 +133,7 @@ public final class Constants
   public static class Climber {
     public static final double kGearRatio = 16.0;             // Example 16:1
     public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
-    public static final double kMaxHeightInches = 8.0;      // Physical limit in inches
+    public static final double kMaxHeightInches = 17.0;      // Physical limit in inches
     // DIO channel for the combined magnetic limit switch wired to the RoboRIO
     public static final int kClimberLimitSwitchDIO = 0;
   }
@@ -156,6 +156,7 @@ public final class Constants
   // Maximum hood angular speed (degrees per second) when moving to a new position
   public static final double kMaxHoodSpeedDegPerSec = 5.0;
   public static final double khoodStepDeg = 2.0;
+
     public static final double kAngleFender = 10.0;   // Angle for shooting near the speaker
     public static final double kAnglePodium = 35.0;   // Angle for shooting from further away
     // Safe maximum RPM for launcher during tuning and runtime clamping
@@ -164,7 +165,7 @@ public final class Constants
 
   public static class Indexer {
     // Safe maximum RPM for indexer
-    public static final double kMaxSafeRpm = 3000.0;
+    public static final double kMaxSafeRpm = 5000.0;
   }
 
   public static class Agitator {

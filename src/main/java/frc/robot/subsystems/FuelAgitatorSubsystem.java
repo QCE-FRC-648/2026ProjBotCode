@@ -65,7 +65,7 @@ public class FuelAgitatorSubsystem extends SubsystemBase {
     }
 
     // Ramp helpers
-    private final SlewRateLimiter rpmSlew = new SlewRateLimiter(1000.0);
+    private final SlewRateLimiter rpmSlew = new SlewRateLimiter(3000.0);
     private double desiredTargetRPM = 0.0;
     private double appliedTargetRPM = 0.0;
 

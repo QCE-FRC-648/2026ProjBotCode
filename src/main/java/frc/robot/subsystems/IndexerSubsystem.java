@@ -24,6 +24,9 @@ public class IndexerSubsystem extends SubsystemBase {
     private final RelativeEncoder indexerEncoder;
 
     private double targetRPM = 0;
+    private final SlewRateLimiter rpmSlew = new SlewRateLimiter(3000.0);
+    private double desiredTargetRPM = 0.0;
+    private double appliedTargetRPM = 0.0;
 
     public IndexerSubsystem() {
         // Initialize the SparkMax
@@ -53,18 +56,37 @@ public class IndexerSubsystem extends SubsystemBase {
      * Set the indexer to a specific RPM.
      */
     public void setVelocity(double rpm) {
-        this.targetRPM = rpm;
-        velocityController.setReference(rpm, ControlType.kVelocity);
+        double max = Constants.Indexer.kMaxSafeRpm;
+        double clamped = Math.signum(rpm) * Math.min(Math.abs(rpm), max);
+        this.targetRPM = clamped;
+        this.desiredTargetRPM = clamped;
     }
 
     public void stop() {
         this.targetRPM = 0;
-        indexerMotor.stopMotor();
+                this.desiredTargetRPM = 0; // Tell periodic() to stop the PID loop
+        this.appliedTargetRPM = 0;
+        rpmSlew.reset(0);           // Clear the ramp "memory"
+        indexerMotor.stopMotor();  // Immediate hardware stop
     }
 
     @Override
     public void periodic() {
+         double next = rpmSlew.calculate(desiredTargetRPM);
+        
+        // GUARD CLAUSE: 
+        // If we want 0 RPM, force a stop. Otherwise, update the PID controller.
+        if (desiredTargetRPM == 0) {
+            indexerMotor.stopMotor();
+        } else {
+            // Only update the motor controller if the ramped value has changed significantly
+            if (Math.abs(next - appliedTargetRPM) > 0.5) {
+                velocityController.setReference(next, ControlType.kVelocity);
+                appliedTargetRPM = next;
+            }
+        }
         SmartDashboard.putNumber("Indexer/Actual RPM", indexerEncoder.getVelocity());
         SmartDashboard.putNumber("Indexer/Target RPM", targetRPM);
+        SmartDashboard.putNumber("Indexer/Applied RPM", appliedTargetRPM);
     }
 }

@@ -138,12 +138,27 @@ public class IntakeDeploySubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        SmartDashboard.putNumber("IntakeDeploy/Extension Inches", IntakeDeployEncoder.getPosition());
+        double posInches = IntakeDeployEncoder.getPosition();
+        // Two possible interpretations of the encoder mounting:
+        // - If the encoder measures motor rotations, travel per motor rotation = kTravelPerRotation / kGearRatio
+        // - If the encoder measures output (screw) rotations, travel per output rotation = kTravelPerRotation
+        double motorTravelPerRotation = Constants.IntakeDeploy.kTravelPerRotation / Constants.IntakeDeploy.kGearRatio;
+        double outputTravelPerRotation = Constants.IntakeDeploy.kTravelPerRotation;
+        double interpretedMotorRotations = motorTravelPerRotation > 0 ? posInches / motorTravelPerRotation : 0.0;
+        double interpretedOutputRotations = outputTravelPerRotation > 0 ? posInches / outputTravelPerRotation : 0.0;
+        double expectedMotorRotationsForFull = Constants.IntakeDeploy.kExtendedInches / motorTravelPerRotation;
+        double expectedOutputRotationsForFull = Constants.IntakeDeploy.kExtendedInches / outputTravelPerRotation;
+
+        SmartDashboard.putNumber("IntakeDeploy/Extension Inches", posInches);
+        SmartDashboard.putNumber("IntakeDeploy/AssumedMotorRotations", interpretedMotorRotations);
+        SmartDashboard.putNumber("IntakeDeploy/AssumedOutputRotations", interpretedOutputRotations);
+        SmartDashboard.putNumber("IntakeDeploy/ExpectedMotorRotationsForFull", expectedMotorRotationsForFull);
+        SmartDashboard.putNumber("IntakeDeploy/ExpectedOutputRotationsForFull", expectedOutputRotationsForFull);
         SmartDashboard.putBoolean("IntakeDeploy/LowerLimit", isLowerSwitchActive());
         SmartDashboard.putBoolean("IntakeDeploy/UpperLimit", isUpperSwitchActive());
-        SmartDashboard.putNumber("IntakeDeploy/Current", IntakeDeployMotor1.getOutputCurrent());
+        SmartDashboard.putNumber("IntakeDeploy/Motor1Current", IntakeDeployMotor1.getOutputCurrent());
         // Reset encoder when lower switch is pressed AND position is near zero to avoid accidental resets.
-        double pos = IntakeDeployEncoder.getPosition();
+        double pos = posInches;
         if (isLowerSwitchActive() && pos < (Constants.IntakeDeploy.kMaxExtensionInches / 10.0)) {
             resetEncoder();
         }

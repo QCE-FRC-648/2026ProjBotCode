@@ -192,8 +192,8 @@ public class RobotContainer
   private void configureBindings() {
 
     m_launcher.setDefaultCommand(new RunCommand(m_launcher::stop, m_launcher));
-m_indexer.setDefaultCommand(new RunCommand(m_indexer::stop, m_indexer));
-m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgitator));
+    m_indexer.setDefaultCommand(new RunCommand(m_indexer::stop, m_indexer));
+    m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgitator));
     // Operator: Manual climber control (left stick up/down)
 
     boolean isRed = DriverStation.getAlliance().isPresent() && 
@@ -205,7 +205,9 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
     Constants.FieldObjectLocations.FieldTarget depot = isRed ? Constants.FieldObjectLocations.RED_DEPOT : Constants.FieldObjectLocations.BLUE_DEPOT;
 
    
-    
+    /* ******************************************************************
+                  Driver Controls
+    *********************************************************************/ 
     // Aim the robot at the scoring station using the target constant
     driverController.rightTrigger().whileTrue(
         driveTrain.driveAndAim(driveAngularVelocity, hub));
@@ -215,8 +217,13 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
         driveTrain.driveAndAim(driveAngularVelocity, tower));
     driverController.leftBumper().whileTrue(
         driveTrain.driveAndAim(driveAngularVelocity, depot));  
+    
+    // Driver: press START to zero/reset the gyro heading
+    driverController.start().onTrue(new InstantCommand(driveTrain::zeroGyro));
 
-     // Operator Controls 
+    /* ******************************************************************
+                  Operator Controls
+    *********************************************************************/ 
     m_climber.setDefaultCommand(new RunCommand(() -> {
       double speed = MathUtil.applyDeadband(-operatorController.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND);
 
@@ -250,9 +257,17 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
       m_intakeDeploy.runAtPower(speed);
     }, m_intakeDeploy));
 
-    // Operator: Manual Homing (Emergency/Reset)
+    /*/ Operator: Manual Homing (Emergency/Reset)
     operatorController.start().whileTrue(new IntakeHomingCommand(m_intakeDeploy).withTimeout(2.0));
     operatorController.back().whileTrue(new ClimberHomingCommand(m_climber).withTimeout(2.0));
+    */
+
+    // Operator: Start button reverses the indexer while held (manual reverse)
+    operatorController.start().whileTrue(
+      new RunCommand(() ->
+        m_indexer.setVelocity(-MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm)),
+        m_indexer))
+      .onFalse(new InstantCommand(m_indexer::stop, m_indexer));
 
     // Operator: Intake Control
     operatorController.rightBumper().onTrue(new InstantCommand(m_intakeDeploy::extend));
@@ -306,7 +321,7 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
     //operatorController.b().whileTrue(new SmartAgitateCommand(m_fuelAgitator));
 
   // Operator: Spin up launcher, then feed indexer + agitator
-  /*  operatorController.y().whileTrue(
+    operatorController.y().whileTrue(
       new SpinUpAndFeedCommand(
         m_launcher,
         m_indexer,
@@ -314,7 +329,7 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
         () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
         () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
         () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)));
-*/
+
     // Operator: Auto-aim hood + spin up + feed (default hub)
     /*
     operatorController.rightTrigger().whileTrue(

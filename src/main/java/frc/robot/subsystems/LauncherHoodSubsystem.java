@@ -42,8 +42,10 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         SparkMaxConfig config = new SparkMaxConfig();
         
         config.absoluteEncoder
+            .inverted(true)
             .positionConversionFactor(360.0)
             .velocityConversionFactor(360.0 / 60.0);
+            
 
         config.idleMode(IdleMode.kBrake);
 
