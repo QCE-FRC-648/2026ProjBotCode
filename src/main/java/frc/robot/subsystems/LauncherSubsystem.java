@@ -26,16 +26,13 @@ public class LauncherSubsystem extends SubsystemBase {
     private final double VELOCITY_TOLERANCE = 100.0;
 
     // Ramp and clamping helpers
-    private final SlewRateLimiter rpmSlew = new SlewRateLimiter(4000.0); // RPM per second
+    private final SlewRateLimiter rpmSlew = new SlewRateLimiter(1000.0); // RPM per second
     private double desiredTargetRPM = 0.0;
     private double appliedTargetRPM = 0.0;
 
     private SparkFlexConfig flywheelMotor1Config = new SparkFlexConfig();
     private SparkFlexConfig flywheelMotor2Config = new SparkFlexConfig();
-    // Live-tuning cache
-    private double m_lastP = 0.005;
-    private double m_lastFF = 0.00017;
-    private double m_lastD = 0.05;
+
 
     public LauncherSubsystem() {
         flywheelMotor1 = new SparkFlex(Constants.CanConstants.FlywheelMotor1CanID, MotorType.kBrushless);
@@ -60,17 +57,11 @@ public class LauncherSubsystem extends SubsystemBase {
             .follow(flywheelMotor1, true);
 
         flywheelMotor1Config.closedLoop
-            .p(m_lastP)
-            .d(m_lastD)
-            .velocityFF(m_lastFF);
+            .p(0.0001)
+            .velocityFF(0.00017);
 
         flywheelMotor1.configure(flywheelMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         flywheelMotor2.configure(flywheelMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-
-        // Put initial tuning values on SmartDashboard for live tuning
-        SmartDashboard.putNumber("Launcher/P", m_lastP);
-        SmartDashboard.putNumber("Launcher/FF", m_lastFF);
-        SmartDashboard.putNumber("Launcher/D", m_lastD);
     }
 
 public void setVelocity(double rpm) {
@@ -123,19 +114,5 @@ public void setVelocity(double rpm) {
         SmartDashboard.putBoolean("Launcher/At Velocity", isAtTarget());
         SmartDashboard.putNumber("Launcher/Flywheel1 Output Amps", flywheelMotor1.getOutputCurrent());
         SmartDashboard.putNumber("Launcher/Flywheel2 Output Amps", flywheelMotor2.getOutputCurrent());
-        SmartDashboard.putNumber("Launcher/Flywheel temp", flywheelMotor1.getMotorTemperature());
-
-            // Live tuning: read P and FF values from SmartDashboard and apply if changed
-            double newP = SmartDashboard.getNumber("Launcher/P", m_lastP);
-            double newFF = SmartDashboard.getNumber("Launcher/FF", m_lastFF);
-            double newD = SmartDashboard.getNumber("Launcher/D", m_lastD);
-            if (newP != m_lastP || newFF != m_lastFF || newD != m_lastD) {
-                m_lastP = newP;
-                m_lastFF = newFF;
-                m_lastD = newD;
-                flywheelMotor1Config.closedLoop.p(m_lastP).velocityFF(m_lastFF).d(m_lastD);
-                // Reconfigure the motor to apply new closed-loop gains
-                flywheelMotor1.configure(flywheelMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-            }
     }
 }
