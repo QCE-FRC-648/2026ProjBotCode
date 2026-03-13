@@ -97,7 +97,7 @@ public class RobotContainer
   SwerveInputStream driveAngularVelocity = SwerveInputStream.of(driveTrain.getSwerveDrive(),
                                                                 () -> driverController.getLeftY() * -1,
                                                                 () -> driverController.getLeftX() * -1)
-                                                            .withControllerRotationAxis(() -> driverController.getRightX() * -1)
+                                                            .withControllerRotationAxis(() -> driverController.getRightX())
                                                             .deadband(OperatorConstants.DEADBAND)
                                                             .cubeTranslationControllerAxis(true)
                                                             .cubeRotationControllerAxis(true)
@@ -245,7 +245,7 @@ public class RobotContainer
       double speed = MathUtil.applyDeadband(operatorController.getRightX(), OperatorConstants.RIGHT_X_DEADBAND);
 
       // If lower (retracted) limit is hit and driver requests further retract, stop.
-      if (m_intakeDeploy.isLowerSwitchActive() && speed < 0) {
+      if (m_intakeDeploy.getPosition() <= 0.0 && speed < 0) {
         speed = 0;
       }
 

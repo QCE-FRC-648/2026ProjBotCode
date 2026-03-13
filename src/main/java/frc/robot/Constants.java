@@ -32,8 +32,8 @@ public final class Constants
   public static final double LOOP_TIME  = 0.13; //s, 20ms + 110ms sprk max velocity lag
   public static final double MAX_SPEED  = Units.feetToMeters(15.1);
     public static final Transform3d kRobotToCam = new Transform3d(
-    new Translation3d(Units.inchesToMeters(18), Units.inchesToMeters(-3), Units.inchesToMeters(22.5)), 
-    new Rotation3d(0, Units.degreesToRadians(0), 0)
+    new Translation3d(Units.inchesToMeters(1.75), Units.inchesToMeters(0), Units.inchesToMeters(13.75)), 
+    new Rotation3d(0, Units.degreesToRadians(60), 0)
   );
 
   public static class DrivetrainConfig {
@@ -142,10 +142,15 @@ public final class Constants
     public static final double kGearRatio = 4.0;            // Example gearbox reduction
     public static final double kTravelPerRotation = 0.5;    // e.g., 0.5 inches per 1 rotation of the screw
     public static final double kExtendedInches = 10.0;       // How far to push out
-    public static final double kMaxExtensionInches = 10.0;   // Physical stop
+    public static final double kMaxExtensionInches = 20.0;   // Physical stop
     // DIO channels for the intake deploy lower and upper magnetic limit switches
-    public static final int kLowerLimitDIO = 1;
-    public static final int kUpperLimitDIO = 2;
+    public static final int kLowerLimitDIO = 2;
+    public static final int kUpperLimitDIO = 1;
+    // If a single magnetic reed is used for both ends, use this DIO and thresholds
+    public static final int kLimitDIO = kLowerLimitDIO; // default to existing lower DIO; change if wired elsewhere
+    public static final double kLimitDebounceMs = 30.0; // ms to debounce the reed switch
+    public static final double kLimitPositionThresholdInches = 0.0; // within 1" of an end count as that end
+    public static final double kLimitVelocityThresholdInchesPerSec = 0.1; // small velocity threshold for inference
   }
 
   public static class Launcher {

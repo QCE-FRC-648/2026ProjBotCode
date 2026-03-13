@@ -21,13 +21,13 @@ public class IntakeHomingCommand extends Command {
     @Override
     public boolean isFinished() {
         // Stop when the reverse limit switch is hit
-        return m_intakeDeploy.isReverseLimitPressed();
+        return m_intakeDeploy.isLowerSwitchActive();
     }
 
     @Override
     public void end(boolean interrupted) {
         m_intakeDeploy.stopPivot();
-        if (!interrupted && m_intakeDeploy.isReverseLimitPressed()) {
+        if (!interrupted && m_intakeDeploy.isLowerSwitchActive()) {
             m_intakeDeploy.resetEncoder();
         }
     }

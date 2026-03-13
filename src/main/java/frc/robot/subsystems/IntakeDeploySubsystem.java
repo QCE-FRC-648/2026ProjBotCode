@@ -21,6 +21,7 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     private final SparkMax IntakeDeployMotor2;
     private final SparkClosedLoopController positionController;
     private final RelativeEncoder IntakeDeployEncoder;
+    // Two magnetic limit switches wired directly to the RoboRIO DIO.
     private final DigitalInput lowerLimitSwitch;
     private final DigitalInput upperLimitSwitch;
 
@@ -84,9 +85,9 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         
         IntakeDeployEncoder.setPosition(0);
 
-        // Initialize DIO-connected magnetic limit switches for intake deploy
-        lowerLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kLowerLimitDIO);
-        upperLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kUpperLimitDIO);
+    // Initialize two DIO reed switches (one at each end)
+    lowerLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kLowerLimitDIO);
+    upperLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kUpperLimitDIO);
     }
 
     /** @param inches Target extension in inches */
@@ -117,9 +118,20 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         IntakeDeployEncoder.setPosition(0);
     }
 
-    public boolean isReverseLimitPressed() {
-        return isLowerSwitchActive();
-    }
+    // Legacy two-switch accessors (commented out). Use the new inference methods below.
+    // public boolean isReverseLimitPressed() {
+    //     return isLowerSwitchActive();
+    // }
+    // /** Returns true when the lower magnetic limit switch is triggered. */
+    // public boolean isLowerSwitchActive() {
+    //     // Invert if your sensor wiring returns false when pressed. Adjust as needed.
+    //     return !lowerLimitSwitch.get();
+    // }
+    // /** Returns true when the upper magnetic limit switch is triggered. */
+    // public boolean isUpperSwitchActive() {
+    //     return !upperLimitSwitch.get();
+    // }
+
 
     /** Returns true when the lower magnetic limit switch is triggered. */
     public boolean isLowerSwitchActive() {
@@ -133,12 +145,15 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     }
 
     public double getPosition() {
-        return IntakeDeployEncoder.getPosition();
+        // Invert encoder reading so positive inches correspond to extension
+        return -IntakeDeployEncoder.getPosition();
     }
 
     @Override
     public void periodic() {
-        double posInches = IntakeDeployEncoder.getPosition();
+        double posInches = getPosition();
+        boolean lowerRaw = isLowerSwitchActive();
+        boolean upperRaw = isUpperSwitchActive();
         // Two possible interpretations of the encoder mounting:
         // - If the encoder measures motor rotations, travel per motor rotation = kTravelPerRotation / kGearRatio
         // - If the encoder measures output (screw) rotations, travel per output rotation = kTravelPerRotation
@@ -154,13 +169,18 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         SmartDashboard.putNumber("IntakeDeploy/AssumedOutputRotations", interpretedOutputRotations);
         SmartDashboard.putNumber("IntakeDeploy/ExpectedMotorRotationsForFull", expectedMotorRotationsForFull);
         SmartDashboard.putNumber("IntakeDeploy/ExpectedOutputRotationsForFull", expectedOutputRotationsForFull);
-        SmartDashboard.putBoolean("IntakeDeploy/LowerLimit", isLowerSwitchActive());
-        SmartDashboard.putBoolean("IntakeDeploy/UpperLimit", isUpperSwitchActive());
+    // Publish compatibility booleans using inference so existing dashboards continue to work
+    SmartDashboard.putBoolean("IntakeDeploy/LowerLimit", lowerRaw);
+    SmartDashboard.putBoolean("IntakeDeploy/UpperLimit", upperRaw);
+    SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawLower", lowerRaw);
+    SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawUpper", upperRaw);
         SmartDashboard.putNumber("IntakeDeploy/Motor1Current", IntakeDeployMotor1.getOutputCurrent());
         // Reset encoder when lower switch is pressed AND position is near zero to avoid accidental resets.
         double pos = posInches;
-        if (isLowerSwitchActive() && pos < (Constants.IntakeDeploy.kMaxExtensionInches / 10.0)) {
+        if (lowerRaw && pos < (Constants.IntakeDeploy.kMaxExtensionInches / 10.0)) {
             resetEncoder();
         }
     }
+
+    
 }
