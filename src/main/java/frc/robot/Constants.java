@@ -139,7 +139,7 @@ public final class Constants
   }
 
   public static class IntakeDeploy {
-    public static final double kGearRatio = 4.0;            // Example gearbox reduction
+    public static final double kGearRatio = 20.0;            // Example gearbox reduction
     public static final double kTravelPerRotation = 0.5;    // e.g., 0.5 inches per 1 rotation of the screw
     public static final double kExtendedInches = 10.0;       // How far to push out
     public static final double kMaxExtensionInches = 20.0;   // Physical stop

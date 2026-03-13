@@ -25,69 +25,54 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     private final DigitalInput lowerLimitSwitch;
     private final DigitalInput upperLimitSwitch;
 
+    private boolean hasHomed = false;
+
     public IntakeDeploySubsystem() {
         IntakeDeployMotor1 = new SparkMax(Constants.CanConstants.IntakeDeployMotor1CanID, MotorType.kBrushless);
         IntakeDeployMotor2 = new SparkMax(Constants.CanConstants.IntakeDeployMotor2CanID, MotorType.kBrushless);
         positionController = IntakeDeployMotor1.getClosedLoopController();
         IntakeDeployEncoder = IntakeDeployMotor1.getEncoder();
 
-        SparkMaxConfig IntakeDeployMotor1Config = new SparkMaxConfig();
+     SparkMaxConfig IntakeDeployMotor1Config = new SparkMaxConfig();
         SparkMaxConfig IntakeDeployMotor2Config = new SparkMaxConfig();
 
-    // --- LINEAR CONVERSION (INCHES) ---
-    // Converts 1 motor rotation into inches of linear travel.
-    // Spark hardware requires a positive position conversion factor; use
-    // absolute value here to avoid invalid-parameter errors at configure().
-    double conversionFactor = Math.abs(Constants.IntakeDeploy.kTravelPerRotation / Constants.IntakeDeploy.kGearRatio);
-        
+        // 1. CONVERSION FACTOR
+        double conversionFactor = Math.abs(Constants.IntakeDeploy.kTravelPerRotation / Constants.IntakeDeploy.kGearRatio);
         IntakeDeployMotor1Config.encoder
             .positionConversionFactor(conversionFactor)
             .velocityConversionFactor(conversionFactor / 60.0);
 
-        // Leader Config
+        // 2. MOTOR INVERSION
+        // Set this to 'true' or 'false' based on which direction is "Forward" (Extension)
+        // Once this is set, the encoder will automatically follow this direction.
         IntakeDeployMotor1Config
             .idleMode(IdleMode.kBrake)
-            .inverted(true)
+            .inverted(true) 
             .smartCurrentLimit(40);
 
-        // Position PID (Tuned for Inches)
+        // 3. PID & SOFT LIMITS
         IntakeDeployMotor1Config.closedLoop
-            .p(0.5) // Linear actuators often need a higher P than swing arms
-            // Reduce closed-loop maximum by 25% (was +/-0.6)
-            .outputRange(-0.3, 0.3); // Cap speed for mechanical safety
+            .p(0.5)
+            .outputRange(-0.5, 0.5); // Bumped to 0.5 to ensure it can overcome friction
 
-        // We're using two magnetic limit switches wired directly to the RoboRIO DIO.
-        // Disable the motor controller's onboard limit switches to avoid conflicting behavior.
-        IntakeDeployMotor1Config.limitSwitch
-            .forwardLimitSwitchType(Type.kNormallyClosed)
-            .reverseLimitSwitchType(Type.kNormallyClosed)
-            .forwardLimitSwitchEnabled(false)
-            .reverseLimitSwitchEnabled(false);
-
-        // Soft Limits (Prevent over-traveling the screw/rack)
         IntakeDeployMotor1Config.softLimit
+            .reverseSoftLimitEnabled(true)
+            .reverseSoftLimit(0.0) // Bottom (Retracted)
             .forwardSoftLimitEnabled(true)
-            .forwardSoftLimit(Constants.IntakeDeploy.kMaxExtensionInches);
+            .forwardSoftLimit(Constants.IntakeDeploy.kMaxExtensionInches); // Top (Extended)
 
-        // Follower Config: configure motor2 to follow motor1 (mirrored)
+        // 4. FOLLOWER
         IntakeDeployMotor2Config
             .idleMode(IdleMode.kBrake)
-            .follow(IntakeDeployMotor1, true);
+            .follow(IntakeDeployMotor1, true); // Set 'true' if Motor 2 is physically mirrored
 
         // Apply Configurations
         IntakeDeployMotor1.configure(IntakeDeployMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         IntakeDeployMotor2.configure(IntakeDeployMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-
-    // NOTE: We reversed the encoder conversion factor above and will invert
-    // manual power commands so that both closed-loop and open-loop control
-    // move the mechanism in the expected (reversed) direction without
-    // relying on deprecated motor inversion APIs.
         
-        IntakeDeployEncoder.setPosition(0);
-
-    // Initialize two DIO reed switches (one at each end)
-    lowerLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kLowerLimitDIO);
-    upperLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kUpperLimitDIO);
+        lowerLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kLowerLimitDIO);
+        upperLimitSwitch = new DigitalInput(Constants.IntakeDeploy.kUpperLimitDIO);
+    
     }
 
     /** @param inches Target extension in inches */
@@ -96,17 +81,28 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     }
 
     public void extend() {
-        setLinearPosition(Constants.IntakeDeploy.kExtendedInches);
+        if (isUpperSwitchActive()) {
+            stopPivot(); // Already at the top, don't move.
+        } else {
+            // Only use PID if we aren't at the limit.
+            setLinearPosition(Constants.IntakeDeploy.kExtendedInches);
+        }
     }
 
     public void retract() {
-        setLinearPosition(0);
+        if (isLowerSwitchActive()) {
+            stopPivot(); // Don't drive into the wall!
+        } else if (!hasHomed) {
+            runAtPower(-0.2); 
+        } else {
+            setLinearPosition(0);
+        }
     }
 
     public void runAtPower(double power) {
         // Flip sign so manual power matches the new encoder direction.
         // Scale manual open-loop power down by 25% (i.e., run at 75% commanded).
-        double cmd = -power;
+        double cmd = power;
         IntakeDeployMotor1.set(cmd);
     }
 
@@ -117,20 +113,6 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     public void resetEncoder() {
         IntakeDeployEncoder.setPosition(0);
     }
-
-    // Legacy two-switch accessors (commented out). Use the new inference methods below.
-    // public boolean isReverseLimitPressed() {
-    //     return isLowerSwitchActive();
-    // }
-    // /** Returns true when the lower magnetic limit switch is triggered. */
-    // public boolean isLowerSwitchActive() {
-    //     // Invert if your sensor wiring returns false when pressed. Adjust as needed.
-    //     return !lowerLimitSwitch.get();
-    // }
-    // /** Returns true when the upper magnetic limit switch is triggered. */
-    // public boolean isUpperSwitchActive() {
-    //     return !upperLimitSwitch.get();
-    // }
 
 
     /** Returns true when the lower magnetic limit switch is triggered. */
@@ -146,7 +128,7 @@ public class IntakeDeploySubsystem extends SubsystemBase {
 
     public double getPosition() {
         // Invert encoder reading so positive inches correspond to extension
-        return -IntakeDeployEncoder.getPosition();
+        return IntakeDeployEncoder.getPosition();
     }
 
     @Override
@@ -154,6 +136,12 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         double posInches = getPosition();
         boolean lowerRaw = isLowerSwitchActive();
         boolean upperRaw = isUpperSwitchActive();
+
+        // We add a velocity check so it only zeroes when the intake has actually stopped.
+        if (lowerRaw && Math.abs(IntakeDeployEncoder.getVelocity()) < 0.1) {
+            resetEncoder();
+            hasHomed = true; 
+        }
         // Two possible interpretations of the encoder mounting:
         // - If the encoder measures motor rotations, travel per motor rotation = kTravelPerRotation / kGearRatio
         // - If the encoder measures output (screw) rotations, travel per output rotation = kTravelPerRotation
@@ -170,16 +158,14 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         SmartDashboard.putNumber("IntakeDeploy/ExpectedMotorRotationsForFull", expectedMotorRotationsForFull);
         SmartDashboard.putNumber("IntakeDeploy/ExpectedOutputRotationsForFull", expectedOutputRotationsForFull);
     // Publish compatibility booleans using inference so existing dashboards continue to work
-    SmartDashboard.putBoolean("IntakeDeploy/LowerLimit", lowerRaw);
-    SmartDashboard.putBoolean("IntakeDeploy/UpperLimit", upperRaw);
-    SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawLower", lowerRaw);
-    SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawUpper", upperRaw);
+        SmartDashboard.putBoolean("IntakeDeploy/LowerLimit", lowerRaw);
+        SmartDashboard.putBoolean("IntakeDeploy/UpperLimit", upperRaw);
+        SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawLower", lowerRaw);
+        SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawUpper", upperRaw);
         SmartDashboard.putNumber("IntakeDeploy/Motor1Current", IntakeDeployMotor1.getOutputCurrent());
-        // Reset encoder when lower switch is pressed AND position is near zero to avoid accidental resets.
-        double pos = posInches;
-        if (lowerRaw && pos < (Constants.IntakeDeploy.kMaxExtensionInches / 10.0)) {
-            resetEncoder();
-        }
+        SmartDashboard.putBoolean("IntakeDeploy/HasHomed", hasHomed);
+
+
     }
 
     

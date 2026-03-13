@@ -244,13 +244,15 @@ public class RobotContainer
     m_intakeDeploy.setDefaultCommand(new RunCommand(() -> {
       double speed = MathUtil.applyDeadband(operatorController.getRightX(), OperatorConstants.RIGHT_X_DEADBAND);
 
-      // If lower (retracted) limit is hit and driver requests further retract, stop.
-      if (m_intakeDeploy.getPosition() <= 0.0 && speed < 0) {
+      // 1. Check for Retract Limit
+      // We use the raw switch here as a backup to the encoder
+      if (m_intakeDeploy.isLowerSwitchActive() && speed < 0) {
         speed = 0;
       }
 
-      // If we're at or past the maximum extension and driver requests more extend, stop.
-      if (m_intakeDeploy.getPosition() >= Constants.IntakeDeploy.kMaxExtensionInches && speed > 0) {
+      // 2. Check for Extension Limit
+      // Only block extension if we have actually homed and know where we are
+      if (m_intakeDeploy.isUpperSwitchActive() && speed > 0) {
         speed = 0;
       }
 

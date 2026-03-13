@@ -29,6 +29,7 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     private double m_requestedAngleDeg = 0.0;
     private double m_lastTimestamp = 0.0;
     private static final double kAngleToleranceDeg = 3.0;
+    private boolean m_isActive = true;
 
     private final InterpolatingDoubleTreeMap m_angleTable = new InterpolatingDoubleTreeMap();
 
@@ -41,27 +42,32 @@ public class LauncherHoodSubsystem extends SubsystemBase {
 
         SparkMaxConfig config = new SparkMaxConfig();
         
+        // 1. Maintain Safety: Soft limits prevent mechanical damage
+        config.softLimit
+            .forwardSoftLimit(Constants.Launcher.kMaxHoodAngle)
+            .forwardSoftLimitEnabled(true)
+            .reverseSoftLimit(Constants.Launcher.kMinHoodAngle)
+            .reverseSoftLimitEnabled(true);
+
+        // 2. Maintain Physics: Must convert rotations to degrees
         config.absoluteEncoder
-            .inverted(true)
             .positionConversionFactor(360.0)
-            .velocityConversionFactor(360.0 / 60.0);
-            
+            .velocityConversionFactor(360.0 / 60.0)
+            .inverted(true);
 
         config.idleMode(IdleMode.kBrake);
 
         config.closedLoop
-            // Using the most direct 2026 package path
             .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
             .p(0.05);
 
         m_motor.configure(config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-        // Initialize target/request to current encoder reading
         m_targetAngleDeg = m_encoder.getPosition();
         m_requestedAngleDeg = m_targetAngleDeg;
         m_lastTimestamp = Timer.getFPGATimestamp();
-        m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
     }
+
 
     private void setupInterpolationTable() {
         m_angleTable.put(1.0, 10.0); 
@@ -76,13 +82,15 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     }
 
     public void setAngle(double degrees) {
-        // Record requested angle (clamped). periodic() will ramp the commanded target toward this value
+        m_isActive = true; 
         m_requestedAngleDeg = MathUtil.clamp(degrees, Constants.Launcher.kMinHoodAngle, Constants.Launcher.kMaxHoodAngle);
     }
 
-    public void stop() {
+   public void stop() {
+        m_isActive = false;
         m_motor.stopMotor();
     }
+
 
     /**
      * Sync the internal expected/requested positions to the current encoder reading and
@@ -111,13 +119,17 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         double dt = Math.max(1e-6, now - m_lastTimestamp);
         m_lastTimestamp = now;
 
-        // Rate-limit how quickly the commanded position moves toward the requested position
-        double maxDelta = Constants.Launcher.kMaxHoodSpeedDegPerSec * dt;
-        double newTarget = MathUtil.clamp(m_requestedAngleDeg, m_targetAngleDeg - maxDelta, m_targetAngleDeg + maxDelta);
-        m_targetAngleDeg = newTarget;
+        if (m_isActive) {
+            // Calculate rate-limited target
+            double maxDelta = Constants.Launcher.kMaxHoodSpeedDegPerSec * dt;
+            m_targetAngleDeg = MathUtil.clamp(m_requestedAngleDeg, m_targetAngleDeg - maxDelta, m_targetAngleDeg + maxDelta);
+            
+            // Only send PID references when active
+            m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+        }
 
-        // Send the (rate-limited) position reference to the controller
-        m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+        // SmartDashboard logging remains identical
+    
 
         SmartDashboard.putNumber("Launcher/Hood Angle", getAngle());
         SmartDashboard.putNumber("Launcher/Hood Target Angle", m_targetAngleDeg);
