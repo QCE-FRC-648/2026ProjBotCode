@@ -120,14 +120,6 @@ public class RobotContainer
 
     driveTrain.setDefaultCommand(driveFieldOrientedAnglularVelocity);
   }
-
-  /**
-   * Sync hood expected position to the current encoder reading. Call this when the robot is
-   * enabled (auton/teleop/test) to prevent the hood from moving unexpectedly on enable.
-   */
-  public void syncHoodPosition() {
-    m_hood.syncToEncoder();
-  }
  
   private void configureNamedCommands() {
     // Register commands for use in PathPlanner Event Markers
@@ -346,14 +338,15 @@ m_fuelAgitator.setDefaultCommand(new RunCommand(m_fuelAgitator::stop, m_fuelAgit
     //operatorController.povDown().onTrue(new InstantCommand(() -> m_hood.setAngle(Constants.Launcher.kAngleFender)));
     //operatorController.povLeft().onTrue(new InstantCommand(() -> m_hood.setAngle(0))); // Stowed
     // step in degrees for each POV press
+    double hoodStepDeg = 2.0;
 
     // Increase hood angle on POV up
     operatorController.povUp().onTrue(
-      new InstantCommand(() -> m_hood.setAngle(m_hood.getAngle() +  Constants.Launcher.khoodStepDeg)));
+      new InstantCommand(() -> m_hood.setAngle(m_hood.getAngle() + hoodStepDeg)));
 
     // Decrease hood angle on POV down
     operatorController.povDown().onTrue(
-      new InstantCommand(() -> m_hood.setAngle(m_hood.getAngle() - Constants.Launcher.khoodStepDeg)));
+      new InstantCommand(() -> m_hood.setAngle(m_hood.getAngle() - hoodStepDeg)));
   }
 
   private void initTuningDashboard() {

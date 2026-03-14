@@ -105,7 +105,7 @@ public class IntakeDeploySubsystem extends SubsystemBase {
     public void runAtPower(double power) {
         // Flip sign so manual power matches the new encoder direction.
         // Scale manual open-loop power down by 25% (i.e., run at 75% commanded).
-        double cmd = -power;
+        double cmd = -power * 0.75;
         IntakeDeployMotor1.set(cmd);
     }
 
@@ -138,10 +138,10 @@ public class IntakeDeploySubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-        SmartDashboard.putNumber("IntakeDeploy/Extension Inches", IntakeDeployEncoder.getPosition());
-        SmartDashboard.putBoolean("IntakeDeploy/LowerLimit", isLowerSwitchActive());
-        SmartDashboard.putBoolean("IntakeDeploy/UpperLimit", isUpperSwitchActive());
-        SmartDashboard.putNumber("IntakeDeploy/Current", IntakeDeployMotor1.getOutputCurrent());
+        SmartDashboard.putNumber("Intake/Extension Inches", IntakeDeployEncoder.getPosition());
+        SmartDashboard.putBoolean("Intake/LowerLimit", isLowerSwitchActive());
+        SmartDashboard.putBoolean("Intake/UpperLimit", isUpperSwitchActive());
+        SmartDashboard.putNumber("IntakeDeployCurrent", IntakeDeployMotor1.getOutputCurrent());
         // Reset encoder when lower switch is pressed AND position is near zero to avoid accidental resets.
         double pos = IntakeDeployEncoder.getPosition();
         if (isLowerSwitchActive() && pos < (Constants.IntakeDeploy.kMaxExtensionInches / 10.0)) {
