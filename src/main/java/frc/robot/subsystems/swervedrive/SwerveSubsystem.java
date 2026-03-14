@@ -28,7 +28,9 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.Timer;
@@ -57,6 +59,7 @@ import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
+import swervelib.SwerveInputStream;
 
 public class SwerveSubsystem extends SubsystemBase
 {
@@ -68,7 +71,7 @@ public class SwerveSubsystem extends SubsystemBase
   /**
    * AprilTag field layout.
    */
-  private final AprilTagFieldLayout aprilTagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2024Crescendo);
+  private final AprilTagFieldLayout aprilTagFieldLayout = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark);
   /**
    * Enable vision odometry updates while driving.
    */
@@ -129,7 +132,14 @@ public class SwerveSubsystem extends SubsystemBase
   @Override
   public void periodic()
   {
-   
+    // Publish heading telemetry for debugging: odometry heading and pose heading
+    try {
+      SmartDashboard.putNumber("IMU/HeadingDeg", getHeading().getDegrees());
+      SmartDashboard.putNumber("IMU/HeadingRad", getHeading().getRadians());
+      SmartDashboard.putNumber("IMU/PoseHeadingDeg", getPose().getRotation().getDegrees());
+    } catch (Exception ignored) {
+      // Avoid throwing during periodic if telemetry fails for any reason
+    }
   }
 
   @Override
@@ -721,4 +731,136 @@ public class SwerveSubsystem extends SubsystemBase
     return new PathPlannerAuto(pathName);
   }
   //this code was stole- inspired by code from a github example from yagsl
+
+  public Command aimAtTarget(Constants.FieldObjectLocations.FieldTarget target)
+    {
+      return aimAtTarget(target.pos, target.side);
+    }
+
+    /**
+     * Command to aim a specific side of the robot at a field coordinate.
+     *
+     * @param target     The {@link Translation2d} of the target point on the field.
+     * @param sideOffset The {@link Rotation2d} offset of the side to aim (e.g., 0 for front, 180 for back).
+     * @return A command to rotate the robot.
+     */
+    public Command aimAtTarget(Translation2d target, Rotation2d sideOffset)
+    {
+      return run(() -> {
+        Pose2d        currentPose    = getPose();
+        Translation2d difference     = target.minus(currentPose.getTranslation());
+        Rotation2d    targetHeading  = new Rotation2d(difference.getX(), difference.getY());
+        Rotation2d    desiredHeading = targetHeading.minus(sideOffset);
+
+        driveFieldOriented(swerveDrive.swerveController.getTargetSpeeds(0,
+                                                                        0,
+                                                                        desiredHeading.getRadians(),
+                                                                        getHeading().getRadians(),
+                                                                        Constants.MAX_SPEED));
+      });
+    }
+
+    /**
+     * Command to drive the robot normally while aiming a specific side at a field coordinate.
+     *
+     * @param translationX Horizontal velocity supplier.
+     * @param translationY Vertical velocity supplier.
+     * @param target       Target point to aim at.
+     * @param sideOffset   Side offset (e.g., 0 for front, 180 for back).
+     * @return Aiming drive command.
+     *
+    public Command driveAndAim(DoubleSupplier translationX, DoubleSupplier translationY, Translation2d target,
+                              Rotation2d sideOffset)
+    {
+      return run(() -> {
+        Pose2d        currentPose    = getPose();
+        Translation2d difference     = target.minus(currentPose.getTranslation());
+        Rotation2d    targetHeading  = new Rotation2d(difference.getX(), difference.getY());
+        Rotation2d    desiredHeading = targetHeading.minus(sideOffset);
+
+        double x = translationX.getAsDouble();
+        double y = translationY.getAsDouble();
+
+        driveFieldOriented(swerveDrive.swerveController.getTargetSpeeds(x,
+                                                                        y,
+                                                                        desiredHeading.getRadians(),
+                                                                        getHeading().getRadians(),
+                                                                        Constants.MAX_SPEED));
+      });
+    }
+  */
+    /**
+     * Command to drive while aiming at a FieldTarget.
+     
+    public Command driveAndAim(DoubleSupplier translationX, DoubleSupplier translationY, Constants.fieldObjectLocations.FieldTarget target)
+    {
+      return driveAndAim(translationX, translationY, target.pos, target.side);
+    }
+  */
+  public Command driveAndAim(SwerveInputStream input, Constants.FieldObjectLocations.FieldTarget target) {
+    return run(() -> {
+      // 1. Get processed translation from the driver stick (field-relative meters/sec)
+      ChassisSpeeds inputSpeeds = input.get();
+
+      // 2. Calculate heading to target
+      Pose2d currentPose = getPose();
+      Translation2d difference = target.pos.minus(currentPose.getTranslation());
+      Rotation2d targetHeading = new Rotation2d(difference.getX(), difference.getY());
+      Rotation2d desiredHeading = targetHeading.minus(target.side);
+
+      // 3. Compute normalized translation inputs expected by the controller
+      // The SwerveController expects joystick-style inputs (approx -1..1) in many places.
+      double maxSpeed = swerveDrive.getMaximumChassisVelocity();
+      double normX = 0.0;
+      double normY = 0.0;
+      if (maxSpeed > 0.0) {
+        normX = inputSpeeds.vxMetersPerSecond / maxSpeed;
+        normY = inputSpeeds.vyMetersPerSecond / maxSpeed;
+      }
+
+      // 4. Calculate the omega required to reach the desired heading while
+      // taking the current translation into account (use normalized inputs).
+      double omega = swerveDrive.swerveController.getTargetSpeeds(
+        normX,
+        normY,
+        desiredHeading.getRadians(),
+        currentPose.getRotation().getRadians(),
+        Constants.MAX_SPEED
+      ).omegaRadiansPerSecond;
+
+      // 5. Construct the final chassis speeds. We keep the processed translation
+      // speeds (in meters/sec) and combine with the computed omega.
+      // Keep a small translation scale to allow rotation authority while moving.
+      final double translationScale = 0.85;
+      ChassisSpeeds targetSpeeds = new ChassisSpeeds(
+        inputSpeeds.vxMetersPerSecond * translationScale,
+        inputSpeeds.vyMetersPerSecond * translationScale,
+        omega
+      );
+
+      // 6. (Optional) Avoid overly aggressive discretization that can zero small omegas
+      // Commented out by default; enable only if needed for control smoothing.
+      // targetSpeeds = ChassisSpeeds.discretize(targetSpeeds, 0.020);
+
+      // 7. Telemetry for debugging: observe inputs, headings and omega on SmartDashboard
+      try {
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("DriveAndAim/InputVx", inputSpeeds.vxMetersPerSecond);
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("DriveAndAim/InputVy", inputSpeeds.vyMetersPerSecond);
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("DriveAndAim/DesiredHeadingDeg", Math.toDegrees(desiredHeading.getRadians()));
+        edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("DriveAndAim/Omega", omega);
+
+        // Also publish to a dedicated NetworkTable so external exporters (Elastic, nt-bridge, etc.)
+        // can reliably pick up these keys under a single table name.
+        var nt = NetworkTableInstance.getDefault().getTable("DriveAndAim");
+        nt.getEntry("InputVx").setDouble(inputSpeeds.vxMetersPerSecond);
+        nt.getEntry("InputVy").setDouble(inputSpeeds.vyMetersPerSecond);
+        nt.getEntry("DesiredHeadingDeg").setDouble(Math.toDegrees(desiredHeading.getRadians()));
+        nt.getEntry("Omega").setDouble(omega);
+      } catch (Exception ignored) {}
+
+      // 8. Send to the drive method
+      driveFieldOriented(targetSpeeds);
+    });
+  }
+
 }
