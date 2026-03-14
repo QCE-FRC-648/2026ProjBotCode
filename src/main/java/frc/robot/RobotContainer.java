@@ -136,8 +136,8 @@ public class RobotContainer
     NamedCommands.registerCommand("IntakeRetract", new InstantCommand(m_intakeDeploy::retract));
     NamedCommands.registerCommand("LaunchPrep", new InstantCommand(() ->
       m_launcher.setVelocity(MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm))));
-    NamedCommands.registerCommand("ClimbUp", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
-    NamedCommands.registerCommand("ClimbDown", new InstantCommand(() -> m_climber.setHeight(0)));
+    NamedCommands.registerCommand("ClimbExtend", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
+    NamedCommands.registerCommand("ClimbRetract", new InstantCommand(() -> m_climber.setHeight(0)));
     NamedCommands.registerCommand("AgitateFuel", new SmartAgitateCommand(m_fuelAgitator));
     NamedCommands.registerCommand("SpinIntake", new RunCommand(() ->
       m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake)
@@ -264,10 +264,10 @@ public class RobotContainer
     operatorController.back().whileTrue(new ClimberHomingCommand(m_climber).withTimeout(2.0));
     */
 
-    // Operator: Start button reverses the indexer while held (manual reverse)
+    // Operator: Start button reverses the indexer while held (manual reverse - open-loop for debugging)
     operatorController.start().whileTrue(
       new RunCommand(() ->
-        m_indexer.setVelocity(-MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm)),
+        m_indexer.runAtPercent(-0.5),
         m_indexer))
       .onFalse(new InstantCommand(m_indexer::stop, m_indexer));
 
@@ -301,14 +301,18 @@ public class RobotContainer
         .finallyDo(interrupted -> m_indexer.stop());
 
     // X -> spin the FUEL AGITATOR at the tuned agitator RPM while held
-    Command agitatorHold = new RunCommand(() ->
-      m_fuelAgitator.setVelocity(MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)), m_fuelAgitator)
-        .finallyDo(interrupted -> m_fuelAgitator.stop());
+    // Command agitatorHold = new RunCommand(() ->
+    //   m_fuelAgitator.setVelocity(MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)), m_fuelAgitator)
+    //     .finallyDo(interrupted -> m_fuelAgitator.stop());
 
     // Bind the triggers to the reusable commands (hold-to-run)
     operatorController.a().whileTrue(launcherHold).onFalse(new InstantCommand(m_launcher::stop,m_launcher));
     operatorController.b().whileTrue(indexerHold).onFalse(new InstantCommand(m_indexer::stop,m_indexer));
-    operatorController.x().whileTrue(agitatorHold).onFalse(new InstantCommand(m_fuelAgitator::stop,m_fuelAgitator));
+    // operatorController.x() was originally bound to agitatorHold. Commenting out to repurpose X for intake percent testing.
+    // operatorController.x().whileTrue(agitatorHold).onFalse(new InstantCommand(m_fuelAgitator::stop,m_fuelAgitator));
+    // New behavior: hold X to run the intake open-loop at 50% for testing (stop on release)
+    operatorController.x().whileTrue(new RunCommand(() -> m_intake.runAtPercent(0.5), m_intake))
+      .onFalse(new InstantCommand(m_intake::stop, m_intake));
 
   // Debugging: log press/release events for A/B/X to help diagnose toggle-like behavior
   operatorController.a().onTrue(new InstantCommand(() -> DriverStation.reportWarning("Operator A pressed", false)));

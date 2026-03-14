@@ -70,6 +70,18 @@ public class IndexerSubsystem extends SubsystemBase {
         indexerMotor.stopMotor();  // Immediate hardware stop
     }
 
+    /**
+     * Open-loop percent control for debugging and manual control.
+     * percent is -1.0..1.0
+     */
+    public void runAtPercent(double percent) {
+        // If commanding open-loop, disable the closed-loop ramp target so periodic() won't override.
+        this.desiredTargetRPM = 0;
+        this.appliedTargetRPM = 0;
+        rpmSlew.reset(0);
+        indexerMotor.set(percent);
+    }
+
     @Override
     public void periodic() {
          double next = rpmSlew.calculate(desiredTargetRPM);
@@ -88,5 +100,6 @@ public class IndexerSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Indexer/Actual RPM", indexerEncoder.getVelocity());
         SmartDashboard.putNumber("Indexer/Target RPM", targetRPM);
         SmartDashboard.putNumber("Indexer/Applied RPM", appliedTargetRPM);
+        SmartDashboard.putNumber("Indexer/Output Amps", indexerMotor.getOutputCurrent());
     }
 }

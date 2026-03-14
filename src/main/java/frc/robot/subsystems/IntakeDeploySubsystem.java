@@ -54,13 +54,13 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         IntakeDeployMotor1Config.closedLoop
             .p(0.5)
             .outputRange(-0.5, 0.5); // Bumped to 0.5 to ensure it can overcome friction
-
+/*
         IntakeDeployMotor1Config.softLimit
             .reverseSoftLimitEnabled(true)
             .reverseSoftLimit(0.0) // Bottom (Retracted)
             .forwardSoftLimitEnabled(true)
             .forwardSoftLimit(Constants.IntakeDeploy.kMaxExtensionInches); // Top (Extended)
-
+*/
         // 4. FOLLOWER
         IntakeDeployMotor2Config
             .idleMode(IdleMode.kBrake)
