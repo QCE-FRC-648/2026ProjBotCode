@@ -19,6 +19,7 @@
         {
           "type": "wait",
           "data": {
+<<<<<<< Updated upstream
             "waitTime": 20.0
 =======
             "waitTime": 5.0
