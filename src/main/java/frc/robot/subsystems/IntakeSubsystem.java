@@ -25,6 +25,10 @@ public class IntakeSubsystem extends SubsystemBase {
     // Last open-loop percent commanded (leader motor). Updated by runAtPercent()
     private double lastPercentCommanded = 0.0;
 
+    // Live-tuning cache for closed-loop gains
+    private double m_lastP = 0.0001;
+    private double m_lastFF = 0.00017;
+
     private SparkFlexConfig IntakeSpinMotor1Config = new SparkFlexConfig();
     private SparkFlexConfig IntakeSpinMotor2Config = new SparkFlexConfig();
 
@@ -55,6 +59,10 @@ public class IntakeSubsystem extends SubsystemBase {
 
         IntakeSpinMotor1.configure(IntakeSpinMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         IntakeSpinMotor2.configure(IntakeSpinMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+
+        // Publish initial tuning values to SmartDashboard for live tuning
+        SmartDashboard.putNumber("Intake/P", m_lastP);
+        SmartDashboard.putNumber("Intake/FF", m_lastFF);
     }
 
    public void setVelocity(double rpm) {
@@ -103,5 +111,15 @@ public class IntakeSubsystem extends SubsystemBase {
         SmartDashboard.putBoolean("Intake/At Velocity", isAtTarget());
         SmartDashboard.putNumber("Intake/Output Amps", IntakeSpinMotor1.getOutputCurrent());
         SmartDashboard.putNumber("Intake/Percent", lastPercentCommanded);
+
+        // Live tuning: read P/FF values and reconfigure controller when changed
+        double newP = SmartDashboard.getNumber("Intake/P", m_lastP);
+        double newFF = SmartDashboard.getNumber("Intake/FF", m_lastFF);
+        if (newP != m_lastP || newFF != m_lastFF) {
+            m_lastP = newP;
+            m_lastFF = newFF;
+            IntakeSpinMotor1Config.closedLoop.p(m_lastP).velocityFF(m_lastFF);
+            IntakeSpinMotor1.configure(IntakeSpinMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
+        }
     }
 }

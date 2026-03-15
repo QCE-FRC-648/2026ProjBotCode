@@ -27,6 +27,8 @@ public class IndexerSubsystem extends SubsystemBase {
     private final SlewRateLimiter rpmSlew = new SlewRateLimiter(3000.0);
     private double desiredTargetRPM = 0.0;
     private double appliedTargetRPM = 0.0;
+    // When true, the subsystem is being driven open-loop with set(percent)
+    private boolean openLoop = false;
 
     public IndexerSubsystem() {
         // Initialize the SparkMax
@@ -56,6 +58,8 @@ public class IndexerSubsystem extends SubsystemBase {
      * Set the indexer to a specific RPM.
      */
     public void setVelocity(double rpm) {
+        // switch back to closed-loop mode
+        this.openLoop = false;
         double max = Constants.Indexer.kMaxSafeRpm;
         double clamped = Math.signum(rpm) * Math.min(Math.abs(rpm), max);
         this.targetRPM = clamped;
@@ -64,8 +68,9 @@ public class IndexerSubsystem extends SubsystemBase {
 
     public void stop() {
         this.targetRPM = 0;
-                this.desiredTargetRPM = 0; // Tell periodic() to stop the PID loop
+        this.desiredTargetRPM = 0; // Tell periodic() to stop the PID loop
         this.appliedTargetRPM = 0;
+        this.openLoop = false;
         rpmSlew.reset(0);           // Clear the ramp "memory"
         indexerMotor.stopMotor();  // Immediate hardware stop
     }
@@ -75,7 +80,9 @@ public class IndexerSubsystem extends SubsystemBase {
      * percent is -1.0..1.0
      */
     public void runAtPercent(double percent) {
-        // If commanding open-loop, disable the closed-loop ramp target so periodic() won't override.
+        // Enter open-loop mode and command the motor percent directly. Periodic() will
+        // not override the motor while openLoop==true.
+        this.openLoop = true;
         this.desiredTargetRPM = 0;
         this.appliedTargetRPM = 0;
         rpmSlew.reset(0);
@@ -84,9 +91,17 @@ public class IndexerSubsystem extends SubsystemBase {
 
     @Override
     public void periodic() {
-         double next = rpmSlew.calculate(desiredTargetRPM);
-        
-        // GUARD CLAUSE: 
+        // If we're in open-loop mode, do not run closed-loop logic or stop the motor.
+        if (openLoop) {
+            SmartDashboard.putNumber("Indexer/Actual RPM", indexerEncoder.getVelocity());
+            SmartDashboard.putNumber("Indexer/Target RPM", targetRPM);
+            SmartDashboard.putNumber("Indexer/Applied RPM", appliedTargetRPM);
+            SmartDashboard.putNumber("Indexer/Output Amps", indexerMotor.getOutputCurrent());
+            return;
+        }
+        double next = rpmSlew.calculate(desiredTargetRPM);
+
+        // GUARD CLAUSE:
         // If we want 0 RPM, force a stop. Otherwise, update the PID controller.
         if (desiredTargetRPM == 0) {
             indexerMotor.stopMotor();
@@ -97,6 +112,7 @@ public class IndexerSubsystem extends SubsystemBase {
                 appliedTargetRPM = next;
             }
         }
+
         SmartDashboard.putNumber("Indexer/Actual RPM", indexerEncoder.getVelocity());
         SmartDashboard.putNumber("Indexer/Target RPM", targetRPM);
         SmartDashboard.putNumber("Indexer/Applied RPM", appliedTargetRPM);
