@@ -19,11 +19,7 @@
         {
           "type": "wait",
           "data": {
-<<<<<<< Updated upstream
-            "waitTime": 20.0
-=======
             "waitTime": 5.0
->>>>>>> Stashed changes
           }
         },
         {
@@ -31,15 +27,6 @@
           "data": {
             "pathName": "Hang"
           }
-<<<<<<< Updated upstream
-=======
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "ClimbExtend"
-          }
->>>>>>> Stashed changes
         }
       ]
     }

@@ -132,8 +132,18 @@ public class RobotContainer
   private void configureNamedCommands() {
     // Register commands for use in PathPlanner Event Markers
     NamedCommands.registerCommand("HomeAll", getHomingSequence());
-    NamedCommands.registerCommand("IntakeExtend", new InstantCommand(m_intakeDeploy::extend));
-    NamedCommands.registerCommand("IntakeRetract", new InstantCommand(m_intakeDeploy::retract));
+    // NamedCommands.registerCommand("IntakeExtend", new InstantCommand(m_intakeDeploy::extend));
+    // NamedCommands.registerCommand("IntakeRetract", new InstantCommand(m_intakeDeploy::retract));
+    NamedCommands.registerCommand("IntakeExtend", 
+      Commands.runOnce(m_intakeDeploy::extend, m_intakeDeploy)
+        .andThen(Commands.waitUntil(m_intakeDeploy::isUpperSwitchActive).withTimeout(3.0))
+        .andThen(new InstantCommand(m_intakeDeploy::stopPivot, m_intakeDeploy))
+    );
+    NamedCommands.registerCommand("IntakeRetract",
+      Commands.runOnce(m_intakeDeploy::retract, m_intakeDeploy)
+        .andThen(Commands.waitUntil(m_intakeDeploy::isLowerSwitchActive).withTimeout(3.0))
+        .andThen(new InstantCommand(m_intakeDeploy::stopPivot, m_intakeDeploy))
+    );
     NamedCommands.registerCommand("LaunchPrep", new InstantCommand(() ->
       m_launcher.setVelocity(MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm))));
     NamedCommands.registerCommand("ClimbExtend", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
@@ -272,18 +282,31 @@ public class RobotContainer
       .onFalse(new InstantCommand(m_indexer::stop, m_indexer));
 
     // Operator: Intake Control
-    operatorController.rightBumper().onTrue(new InstantCommand(m_intakeDeploy::extend));
-    operatorController.leftBumper().onTrue(new InstantCommand(m_intakeDeploy::retract));
+    // operatorController.rightBumper().onTrue(new InstantCommand(m_intakeDeploy::extend));
+    // operatorController.leftBumper().onTrue(new InstantCommand(m_intakeDeploy::retract));
+
+    operatorController.rightBumper().onTrue(
+      Commands.runOnce(m_intakeDeploy::extend, m_intakeDeploy)
+      .andThen(Commands.waitUntil(m_intakeDeploy::isUpperSwitchActive).withTimeout(3.0))
+      .andThen(new InstantCommand(m_intakeDeploy::stopPivot, m_intakeDeploy))
+    );
+
+    operatorController.leftBumper().onTrue(
+      Commands.runOnce(m_intakeDeploy::retract, m_intakeDeploy)
+      .andThen(Commands.waitUntil(m_intakeDeploy::isLowerSwitchActive).withTimeout(3.0))
+      .andThen(new InstantCommand(m_intakeDeploy::stopPivot, m_intakeDeploy))
+    );
 
     // Intake spin: Right trigger spins the intake forward at the tuned RPM.
     // Left trigger spins the intake in reverse at a reduced magnitude for safety.
     // Reverse is intentionally scaled to 50% to reduce mechanical stress and
     // avoid ejecting game pieces violently. Adjust the scale as needed.
     //intake
-    operatorController.rightTrigger().whileTrue(new RunCommand(() ->
+   /* operatorController.rightTrigger().whileTrue(new RunCommand(() ->
       m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake))
       .onFalse(new InstantCommand(m_intake::stop));
-    //extract
+    */
+      //extract
     operatorController.leftTrigger().whileTrue(new RunCommand(() ->
       m_intake.setVelocity(-0.5 * getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake))
       .onFalse(new InstantCommand(m_intake::stop));
@@ -311,7 +334,7 @@ public class RobotContainer
     // operatorController.x() was originally bound to agitatorHold. Commenting out to repurpose X for intake percent testing.
     // operatorController.x().whileTrue(agitatorHold).onFalse(new InstantCommand(m_fuelAgitator::stop,m_fuelAgitator));
     // New behavior: hold X to run the intake open-loop at 50% for testing (stop on release)
-    operatorController.x().whileTrue(new RunCommand(() -> m_intake.runAtPercent(0.5), m_intake))
+    operatorController.rightTrigger().whileTrue(new RunCommand(() -> m_intake.runAtPercent(0.7), m_intake))
       .onFalse(new InstantCommand(m_intake::stop, m_intake));
 
   // Debugging: log press/release events for A/B/X to help diagnose toggle-like behavior

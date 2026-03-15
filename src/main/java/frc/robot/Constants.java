@@ -33,7 +33,7 @@ public final class Constants
   public static final double MAX_SPEED  = Units.feetToMeters(15.1);
     public static final Transform3d kRobotToCam = new Transform3d(
     new Translation3d(Units.inchesToMeters(1.75), Units.inchesToMeters(0), Units.inchesToMeters(13.75)), 
-    new Rotation3d(0, Units.degreesToRadians(60), 0)
+    new Rotation3d(0, Units.degreesToRadians(15), 0)
   );
 
   public static class DrivetrainConfig {
@@ -133,7 +133,7 @@ public final class Constants
   public static class Climber {
     public static final double kGearRatio = 16.0;             // Example 16:1
     public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
-    public static final double kMaxHeightInches = 17.0;      // Physical limit in inches
+    public static final double kMaxHeightInches = 21.0;      // Physical limit in inches
     // DIO channel for the combined magnetic limit switch wired to the RoboRIO
     public static final int kClimberLimitSwitchDIO = 0;
   }
