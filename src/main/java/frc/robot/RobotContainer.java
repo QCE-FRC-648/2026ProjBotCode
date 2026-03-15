@@ -67,8 +67,8 @@ public class RobotContainer
   private static final String kAgitatorRpmKey = "Tuning/Agitator RPM";
   private static final String kIntakeRpmKey = "Tuning/Intake RPM";
 
-  private static final double kLauncherRpmDefault = 4500;
-  private static final double kIndexerRpmDefault = 2000;
+  private static final double kLauncherRpmDefault = 4000;
+  private static final double kIndexerRpmDefault = 3000;
   private static final double kAgitatorRpmDefault = 3000;
   private static final double kIntakeRpmDefault = 3000;
   //Define Subsystems
