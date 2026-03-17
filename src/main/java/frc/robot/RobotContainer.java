@@ -435,17 +435,17 @@ public class RobotContainer
    */
   public Command getAutonomousCommand() {
     // This creates a sequence that HOMES first, then runs the PathPlanner Auto
-      return new SequentialCommandGroup(
-       //get homing sequence
-      autoChooser.getSelected()
-      );
-        // return new SpinUpAndFeedCommand(
-        // m_launcher,
-        // m_indexer,
-        // m_fuelAgitator,
-        // () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
-        // () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
-        // () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm))
+      // return new SequentialCommandGroup(
+      //  //get homing sequence
+      // autoChooser.getSelected()
+      // );
+         return new SpinUpAndFeedCommand(
+        m_launcher,
+        m_indexer,
+        m_fuelAgitator,
+        () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
+        () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
+        () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm));
   }
 }
 

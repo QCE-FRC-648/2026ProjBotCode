@@ -159,8 +159,8 @@ public final class Constants
   // Minimum degrees of travel for the hood (safe stow / mechanical stop)
   public static final double kMinHoodAngle = 5.0;
   // Maximum hood angular speed (degrees per second) when moving to a new position
-  public static final double kMaxHoodSpeedDegPerSec = 5.0;
-  public static final double khoodStepDeg = 2.0;
+  public static final double kMaxHoodSpeedDegPerSec = 30.0;
+  public static final double khoodStepDeg = 5.0;
 
     public static final double kAngleFender = 10.0;   // Angle for shooting near the speaker
     public static final double kAnglePodium = 35.0;   // Angle for shooting from further away
