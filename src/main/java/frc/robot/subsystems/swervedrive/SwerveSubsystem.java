@@ -137,6 +137,8 @@ public class SwerveSubsystem extends SubsystemBase
       SmartDashboard.putNumber("IMU/HeadingDeg", getHeading().getDegrees());
       SmartDashboard.putNumber("IMU/HeadingRad", getHeading().getRadians());
       SmartDashboard.putNumber("IMU/PoseHeadingDeg", getPose().getRotation().getDegrees());
+      SmartDashboard.putNumber("IMU/Posex", getPose().getX());
+      SmartDashboard.putNumber("IMU/Posey", getPose().getY());
     } catch (Exception ignored) {
       // Avoid throwing during periodic if telemetry fails for any reason
     }
@@ -160,7 +162,7 @@ public class SwerveSubsystem extends SubsystemBase
       config = RobotConfig.fromGUISettings();
 
       final boolean enableFeedforward = true;
-      // Configure AutoBuilder last
+      // Configure AutoBuilder last 
       AutoBuilder.configure(
           swerveDrive::getPose,
           // Robot pose supplier
@@ -605,6 +607,7 @@ public class SwerveSubsystem extends SubsystemBase
    */
   public Rotation2d getHeading()
   {
+    //return swerveDrive.getYaw();
     return getPose().getRotation();
   }
 

@@ -33,7 +33,7 @@ public final class Constants
   public static final double MAX_SPEED  = Units.feetToMeters(15.1);
     public static final Transform3d kRobotToCam = new Transform3d(
     new Translation3d(Units.inchesToMeters(1.75), Units.inchesToMeters(0), Units.inchesToMeters(13.75)), 
-    new Rotation3d(0, Units.degreesToRadians(60), 0)
+    new Rotation3d(0, Units.degreesToRadians(15), 0)
   );
 
   public static class DrivetrainConfig {
@@ -133,7 +133,7 @@ public final class Constants
   public static class Climber {
     public static final double kGearRatio = 16.0;             // Example 16:1
     public static final double kDrumDiameterInches = 1.25;    // Diameter of winch or sprocket
-    public static final double kMaxHeightInches = 17.0;      // Physical limit in inches
+    public static final double kMaxHeightInches = 21.0;      // Physical limit in inches
     // DIO channel for the combined magnetic limit switch wired to the RoboRIO
     public static final int kClimberLimitSwitchDIO = 0;
   }
@@ -159,8 +159,8 @@ public final class Constants
   // Minimum degrees of travel for the hood (safe stow / mechanical stop)
   public static final double kMinHoodAngle = 5.0;
   // Maximum hood angular speed (degrees per second) when moving to a new position
-  public static final double kMaxHoodSpeedDegPerSec = 5.0;
-  public static final double khoodStepDeg = 2.0;
+  public static final double kMaxHoodSpeedDegPerSec = 30.0;
+  public static final double khoodStepDeg = 5.0;
 
     public static final double kAngleFender = 10.0;   // Angle for shooting near the speaker
     public static final double kAnglePodium = 35.0;   // Angle for shooting from further away

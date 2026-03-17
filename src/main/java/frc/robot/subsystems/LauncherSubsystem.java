@@ -23,7 +23,7 @@ public class LauncherSubsystem extends SubsystemBase {
     private final RelativeEncoder flywheelEncoder2;
 
     private double targetRPM = 0;
-    private final double VELOCITY_TOLERANCE = 100.0;
+    private final double VELOCITY_TOLERANCE = 500.0;
 
     // Ramp and clamping helpers
     private final SlewRateLimiter rpmSlew = new SlewRateLimiter(4000.0); // RPM per second
