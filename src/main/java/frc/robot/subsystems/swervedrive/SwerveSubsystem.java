@@ -162,7 +162,7 @@ public class SwerveSubsystem extends SubsystemBase
       config = RobotConfig.fromGUISettings();
 
       final boolean enableFeedforward = true;
-      // Configure AutoBuilder last
+      // Configure AutoBuilder last 
       AutoBuilder.configure(
           swerveDrive::getPose,
           // Robot pose supplier

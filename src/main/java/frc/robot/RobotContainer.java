@@ -17,6 +17,8 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.swervedrive.SwerveSubsystem;
+import frc.robot.subsystems.vision.Vision;
+
 import java.io.File;
 import swervelib.SwerveInputStream;
 
@@ -82,6 +84,7 @@ public class RobotContainer
   private final ClimberSubsystem m_climber = new ClimberSubsystem();
   private final FuelAgitatorSubsystem m_fuelAgitator = new FuelAgitatorSubsystem();
   private final LauncherHoodSubsystem m_hood = new LauncherHoodSubsystem();
+  //private final Vision vision = new Vision(driveTrain);
 
 
   //Define Controllers
@@ -432,10 +435,17 @@ public class RobotContainer
    */
   public Command getAutonomousCommand() {
     // This creates a sequence that HOMES first, then runs the PathPlanner Auto
-    return new SequentialCommandGroup(
-        //getHomingSequence(),
-        autoChooser.getSelected()
-    );
+      return new SequentialCommandGroup(
+       //get homing sequence
+      autoChooser.getSelected()
+      );
+        // return new SpinUpAndFeedCommand(
+        // m_launcher,
+        // m_indexer,
+        // m_fuelAgitator,
+        // () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
+        // () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
+        // () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm))
   }
 }
 
