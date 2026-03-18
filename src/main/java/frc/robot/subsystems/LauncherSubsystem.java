@@ -67,10 +67,10 @@ public class LauncherSubsystem extends SubsystemBase {
         flywheelMotor1.configure(flywheelMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         flywheelMotor2.configure(flywheelMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-        // Put initial tuning values on SmartDashboard for live tuning
-        SmartDashboard.putNumber("Launcher/P", m_lastP);
-        SmartDashboard.putNumber("Launcher/FF", m_lastFF);
-        SmartDashboard.putNumber("Launcher/D", m_lastD);
+    // Note: PID tuning values are intentionally kept in fields but we do not
+    // expose live tuning via SmartDashboard in this build to avoid runtime
+    // reconfiguration complexity. The initial closed-loop gains are still
+    // applied from the cached m_last* values above.
     }
 
 public void setVelocity(double rpm) {
@@ -114,28 +114,13 @@ public void setVelocity(double rpm) {
     }
 
     // Logging for debugging the "Toggle" feel
-    SmartDashboard.putNumber("Launcher/Desired Target", desiredTargetRPM);
-    SmartDashboard.putNumber("Launcher/Current Ramped Value", rampedValue);
     SmartDashboard.putNumber("Launcher/Actual RPM", flywheelEncoder.getVelocity());
+    SmartDashboard.putNumber("Launcher/Target RPM", targetRPM);
+    SmartDashboard.putNumber("Launcher/Applied RPM", appliedTargetRPM);
+    SmartDashboard.putBoolean("Launcher/At Velocity", isAtTarget());
 
-        SmartDashboard.putNumber("Launcher/Target RPM", targetRPM);
-        SmartDashboard.putNumber("Launcher/Applied RPM", appliedTargetRPM);
-        SmartDashboard.putBoolean("Launcher/At Velocity", isAtTarget());
-        SmartDashboard.putNumber("Launcher/Flywheel1 Output Amps", flywheelMotor1.getOutputCurrent());
-        SmartDashboard.putNumber("Launcher/Flywheel2 Output Amps", flywheelMotor2.getOutputCurrent());
-        SmartDashboard.putNumber("Launcher/Flywheel temp", flywheelMotor1.getMotorTemperature());
-
-            // Live tuning: read P and FF values from SmartDashboard and apply if changed
-            double newP = SmartDashboard.getNumber("Launcher/P", m_lastP);
-            double newFF = SmartDashboard.getNumber("Launcher/FF", m_lastFF);
-            double newD = SmartDashboard.getNumber("Launcher/D", m_lastD);
-            if (newP != m_lastP || newFF != m_lastFF || newD != m_lastD) {
-                m_lastP = newP;
-                m_lastFF = newFF;
-                m_lastD = newD;
-                flywheelMotor1Config.closedLoop.p(m_lastP).velocityFF(m_lastFF).d(m_lastD);
-                // Reconfigure the motor to apply new closed-loop gains
-                flywheelMotor1.configure(flywheelMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-            }
+            // PID live-tuning has been removed. Gains are set from the cached
+            // m_lastP/m_lastFF/m_lastD values at initialization and are not
+            // re-read from SmartDashboard during runtime.
     }
 }

@@ -134,7 +134,6 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Launcher/Hood Angle", getAngle());
         SmartDashboard.putNumber("Launcher/Hood Target Angle", m_targetAngleDeg);
         SmartDashboard.putNumber("Launcher/Hood Requested Angle", m_requestedAngleDeg);
-        SmartDashboard.putNumber("Launcher/Hood MaxSpeedDegPerSec", Constants.Launcher.kMaxHoodSpeedDegPerSec);
         SmartDashboard.putBoolean("Launcher/Hood At Target", isAtTarget());
     }
 }

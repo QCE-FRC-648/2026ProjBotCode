@@ -35,6 +35,7 @@ import frc.robot.subsystems.swervedrive.*;
 import frc.robot.commands.Intake.IntakeHomingCommand;
 import frc.robot.commands.Intake.SmartAgitateCommand;
 import frc.robot.commands.Launcher.AutoAimSpinUpAndFeedCommand;
+import frc.robot.commands.Launcher.AutoSpinUpAndFeedCommand;
 import frc.robot.commands.Launcher.SpinUpAndFeedCommand;
 import frc.robot.commands.Climber.ClimberHomingCommand;
 import frc.robot.commands.SwervedriveCommands.auto.*;
@@ -112,7 +113,6 @@ public class RobotContainer
    */
   public RobotContainer()
   {
-    initTuningDashboard();
     // Configure the trigger bindings
     configureNamedCommands();
     configureBindings();
@@ -134,7 +134,12 @@ public class RobotContainer
  
   private void configureNamedCommands() {
     // Register commands for use in PathPlanner Event Markers
-    NamedCommands.registerCommand("HomeAll", getHomingSequence());
+    // Use an InstantCommand that schedules a fresh homing sequence when triggered so
+    // the same Command instance is not reused across PathPlanner events (which
+    // would cause "command already in use" errors).
+    NamedCommands.registerCommand("HomeAll",
+      new InstantCommand(() -> getHomingSequence().schedule())
+    );
     // NamedCommands.registerCommand("IntakeExtend", new InstantCommand(m_intakeDeploy::extend));
     // NamedCommands.registerCommand("IntakeRetract", new InstantCommand(m_intakeDeploy::retract));
     NamedCommands.registerCommand("IntakeExtend", 
@@ -151,10 +156,20 @@ public class RobotContainer
       m_launcher.setVelocity(MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm))));
     NamedCommands.registerCommand("ClimbExtend", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
     NamedCommands.registerCommand("ClimbRetract", new InstantCommand(() -> m_climber.setHeight(0)));
-    NamedCommands.registerCommand("AgitateFuel", new SmartAgitateCommand(m_fuelAgitator));
-    NamedCommands.registerCommand("SpinIntake", new RunCommand(() ->
-      m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake)
-      .finallyDo(interrupted -> m_intake.stop()));
+    // Schedule a fresh SmartAgitateCommand when the named event fires to avoid
+    // reusing the same command instance.
+    NamedCommands.registerCommand("AgitateFuel",
+      new InstantCommand(() -> new SmartAgitateCommand(m_fuelAgitator).schedule())
+    );
+    // Schedule a fresh RunCommand instance for the intake when triggered so it
+    // can be run/ended independently each time the event fires.
+    NamedCommands.registerCommand("SpinIntake",
+      new InstantCommand(() -> new RunCommand(() ->
+        m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake)
+        .finallyDo(interrupted -> m_intake.stop())
+        .schedule()
+      )
+    );
     NamedCommands.registerCommand("AutoHoodAngle", new InstantCommand(() -> {
       boolean isRed = DriverStation.getAlliance().isPresent() &&
                       DriverStation.getAlliance().get() == DriverStation.Alliance.Red;
@@ -327,15 +342,15 @@ public class RobotContainer
         .finallyDo(interrupted -> m_indexer.stop());
 
     // X -> spin the FUEL AGITATOR at the tuned agitator RPM while held
-    // Command agitatorHold = new RunCommand(() ->
-    //   m_fuelAgitator.setVelocity(MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)), m_fuelAgitator)
-    //     .finallyDo(interrupted -> m_fuelAgitator.stop());
+    Command agitatorHold = new RunCommand(() ->
+      m_fuelAgitator.setVelocity(MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)), m_fuelAgitator)
+        .finallyDo(interrupted -> m_fuelAgitator.stop());
 
     // Bind the triggers to the reusable commands (hold-to-run)
     operatorController.a().whileTrue(launcherHold).onFalse(new InstantCommand(m_launcher::stop,m_launcher));
     operatorController.b().whileTrue(indexerHold).onFalse(new InstantCommand(m_indexer::stop,m_indexer));
     // operatorController.x() was originally bound to agitatorHold. Commenting out to repurpose X for intake percent testing.
-    // operatorController.x().whileTrue(agitatorHold).onFalse(new InstantCommand(m_fuelAgitator::stop,m_fuelAgitator));
+    operatorController.x().whileTrue(agitatorHold).onFalse(new InstantCommand(m_fuelAgitator::stop,m_fuelAgitator));
     // New behavior: hold X to run the intake open-loop at 50% for testing (stop on release)
     operatorController.rightTrigger().whileTrue(new RunCommand(() -> m_intake.runAtPercent(0.7), m_intake))
       .onFalse(new InstantCommand(m_intake::stop, m_intake));
@@ -404,14 +419,14 @@ public class RobotContainer
   }
 
   private void initTuningDashboard() {
-    SmartDashboard.putNumber(kLauncherRpmKey, SmartDashboard.getNumber(kLauncherRpmKey, kLauncherRpmDefault));
-    SmartDashboard.putNumber(kIndexerRpmKey, SmartDashboard.getNumber(kIndexerRpmKey, kIndexerRpmDefault));
-    SmartDashboard.putNumber(kAgitatorRpmKey, SmartDashboard.getNumber(kAgitatorRpmKey, kAgitatorRpmDefault));
-    SmartDashboard.putNumber(kIntakeRpmKey, SmartDashboard.getNumber(kIntakeRpmKey, kIntakeRpmDefault));
+    // Tuning removed: do not publish live tunable RPMs to SmartDashboard.
+    // Default RPM constants are used directly via getTuningNumber(default).
   }
 
   private double getTuningNumber(String key, double defaultValue) {
-    return SmartDashboard.getNumber(key, defaultValue);
+    // Tuning removed: always return the provided default value so code uses
+    // the static defaults defined in this class.
+    return defaultValue;
   }
      
   /**
@@ -439,7 +454,7 @@ public class RobotContainer
       //  //get homing sequence
       // autoChooser.getSelected()
       // );
-         return new SpinUpAndFeedCommand(
+         return new AutoSpinUpAndFeedCommand(
         m_launcher,
         m_indexer,
         m_fuelAgitator,
