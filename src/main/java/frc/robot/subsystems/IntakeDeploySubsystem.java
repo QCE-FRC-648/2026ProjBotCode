@@ -151,18 +151,17 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         double interpretedOutputRotations = outputTravelPerRotation > 0 ? posInches / outputTravelPerRotation : 0.0;
         double expectedMotorRotationsForFull = Constants.IntakeDeploy.kExtendedInches / motorTravelPerRotation;
         double expectedOutputRotationsForFull = Constants.IntakeDeploy.kExtendedInches / outputTravelPerRotation;
-
+        /*/
         SmartDashboard.putNumber("IntakeDeploy/Extension Inches", posInches);
         SmartDashboard.putNumber("IntakeDeploy/AssumedMotorRotations", interpretedMotorRotations);
         SmartDashboard.putNumber("IntakeDeploy/AssumedOutputRotations", interpretedOutputRotations);
         SmartDashboard.putNumber("IntakeDeploy/ExpectedMotorRotationsForFull", expectedMotorRotationsForFull);
         SmartDashboard.putNumber("IntakeDeploy/ExpectedOutputRotationsForFull", expectedOutputRotationsForFull);
+        */
     // Publish compatibility booleans using inference so existing dashboards continue to work
         SmartDashboard.putBoolean("IntakeDeploy/LowerLimit", lowerRaw);
         SmartDashboard.putBoolean("IntakeDeploy/UpperLimit", upperRaw);
-        SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawLower", lowerRaw);
-        SmartDashboard.putBoolean("IntakeDeploy/LimitSwitchRawUpper", upperRaw);
-        SmartDashboard.putNumber("IntakeDeploy/Motor1Current", IntakeDeployMotor1.getOutputCurrent());
+
         SmartDashboard.putBoolean("IntakeDeploy/HasHomed", hasHomed);
 
 

@@ -54,15 +54,16 @@ public class IntakeSubsystem extends SubsystemBase {
             .follow(IntakeSpinMotor1, true);
 
         IntakeSpinMotor1Config.closedLoop
-            .p(0.0001)
-            .velocityFF(0.00017);
+            .p(m_lastP)
+            .velocityFF(m_lastFF);
 
         IntakeSpinMotor1.configure(IntakeSpinMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         IntakeSpinMotor2.configure(IntakeSpinMotor2Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
 
-        // Publish initial tuning values to SmartDashboard for live tuning
-        SmartDashboard.putNumber("Intake/P", m_lastP);
-        SmartDashboard.putNumber("Intake/FF", m_lastFF);
+    // Note: PID tuning values are intentionally kept in fields but we do not
+    // expose live tuning via SmartDashboard in this build to avoid runtime
+    // reconfiguration complexity. The initial closed-loop gains are still
+    // applied from the cached m_last* values above.
     }
 
    public void setVelocity(double rpm) {
@@ -112,14 +113,8 @@ public class IntakeSubsystem extends SubsystemBase {
         SmartDashboard.putNumber("Intake/Output Amps", IntakeSpinMotor1.getOutputCurrent());
         SmartDashboard.putNumber("Intake/Percent", lastPercentCommanded);
 
-        // Live tuning: read P/FF values and reconfigure controller when changed
-        double newP = SmartDashboard.getNumber("Intake/P", m_lastP);
-        double newFF = SmartDashboard.getNumber("Intake/FF", m_lastFF);
-        if (newP != m_lastP || newFF != m_lastFF) {
-            m_lastP = newP;
-            m_lastFF = newFF;
-            IntakeSpinMotor1Config.closedLoop.p(m_lastP).velocityFF(m_lastFF);
-            IntakeSpinMotor1.configure(IntakeSpinMotor1Config, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-        }
+        // PID live-tuning has been removed. Gains are set from the cached
+        // m_lastP/m_lastFF values at initialization and are not re-read from
+        // SmartDashboard during runtime.
     }
 }
