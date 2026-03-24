@@ -28,7 +28,7 @@ public class LauncherHoodSubsystem extends SubsystemBase {
     // The angle requested by callers; we will ramp m_targetAngleDeg toward this at a limited rate
     private double m_requestedAngleDeg = 0.0;
     private double m_lastTimestamp = 0.0;
-    private static final double kAngleToleranceDeg = 3.0;
+    private static final double kAngleToleranceDeg = 4.0;
     private boolean m_isActive = true;
 
     private final InterpolatingDoubleTreeMap m_angleTable = new InterpolatingDoubleTreeMap();
@@ -70,10 +70,11 @@ public class LauncherHoodSubsystem extends SubsystemBase {
 
 
     private void setupInterpolationTable() {
-        m_angleTable.put(1.0, 10.0); 
-        m_angleTable.put(2.0, 25.0);
-        m_angleTable.put(3.0, 38.0);
-        m_angleTable.put(5.0, 55.0);
+        m_angleTable.put(1.75, 5.0); 
+        m_angleTable.put(2.1, 20.0);
+        m_angleTable.put(2.7, 40.0);
+        m_angleTable.put(3.44, 50.0);
+        m_angleTable.put(4.1, 86.0);
     }
 
     public void setAngleFromPose(Translation2d robotPose, Translation2d targetPose) {
@@ -119,13 +120,22 @@ public class LauncherHoodSubsystem extends SubsystemBase {
         double dt = Math.max(1e-6, now - m_lastTimestamp);
         m_lastTimestamp = now;
 
-        if (m_isActive) {
-            // Calculate rate-limited target
-            double maxDelta = Constants.Launcher.kMaxHoodSpeedDegPerSec * dt;
-            m_targetAngleDeg = MathUtil.clamp(m_requestedAngleDeg, m_targetAngleDeg - maxDelta, m_targetAngleDeg + maxDelta);
-            
-            // Only send PID references when active
-            m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+        double currentAngle = getAngle();
+
+        if(currentAngle < Constants.Launcher.kMinHoodAngle || currentAngle > Constants.Launcher.kMaxHoodAngle){
+            m_isActive = false;
+            m_motor.stopMotor();
+            SmartDashboard.putBoolean("Launcher/Hood out of bounds", true);
+        } else {
+            SmartDashboard.putBoolean("Launcher/Hood out of bounds", false);
+            if (m_isActive) {
+                // Calculate rate-limited target
+                double maxDelta = Constants.Launcher.kMaxHoodSpeedDegPerSec * dt;
+                m_targetAngleDeg = MathUtil.clamp(m_requestedAngleDeg, m_targetAngleDeg - maxDelta, m_targetAngleDeg + maxDelta);
+                
+                // Only send PID references when active
+                m_controller.setReference(m_targetAngleDeg, SparkMax.ControlType.kPosition);
+            }
         }
 
         // SmartDashboard logging remains identical

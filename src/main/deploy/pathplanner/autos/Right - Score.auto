@@ -7,25 +7,13 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Right - pass the line"
+            "pathName": "Right - Pass the line"
           }
         },
         {
           "type": "path",
           "data": {
             "pathName": "Right - score"
-          }
-        },
-        {
-          "type": "wait",
-          "data": {
-            "waitTime": 20.0
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Hang"
           }
         }
       ]

@@ -35,6 +35,7 @@ import frc.robot.subsystems.swervedrive.*;
 import frc.robot.commands.Intake.IntakeHomingCommand;
 import frc.robot.commands.Intake.SmartAgitateCommand;
 import frc.robot.commands.Launcher.AutoAimSpinUpAndFeedCommand;
+import frc.robot.commands.Launcher.AutoSpinUpAndFeedCommand;
 import frc.robot.commands.Launcher.SpinUpAndFeedCommand;
 import frc.robot.commands.Climber.ClimberHomingCommand;
 import frc.robot.commands.SwervedriveCommands.auto.*;
@@ -100,12 +101,12 @@ public class RobotContainer
   SwerveInputStream driveAngularVelocity = SwerveInputStream.of(driveTrain.getSwerveDrive(),
                                                                 () -> driverController.getLeftY() * -1,
                                                                 () -> driverController.getLeftX() * -1)
-                                                            .withControllerRotationAxis(() -> driverController.getRightX())
+                                                            .withControllerRotationAxis(() -> driverController.getRightX()* -1)
                                                             .deadband(OperatorConstants.DEADBAND)
                                                             .cubeTranslationControllerAxis(true)
                                                             .cubeRotationControllerAxis(true)
                                                             .scaleTranslation(.8)
-                                                            .allianceRelativeControl(true);
+                                                            .allianceRelativeControl(true); // Changed to false by CSA JTS 2026-03-20 11:49
 
   /**
    * The container for the robot. Contains subsystems, OI devices, and commands.
@@ -121,6 +122,8 @@ public class RobotContainer
     SmartDashboard.putData("Auto Mode", autoChooser);
     Command driveFieldOrientedAnglularVelocity = driveTrain.driveFieldOriented(driveAngularVelocity);
 
+   // driveTrain.zeroGyroWithAlliance(); // Added by CSA JTS on 2026-03-21 0819
+    driveTrain.zeroGyro(); // Added by CSA JTS on 2026-03-21 0935
     driveTrain.setDefaultCommand(driveFieldOrientedAnglularVelocity);
   }
 
@@ -129,7 +132,12 @@ public class RobotContainer
    * enabled (auton/teleop/test) to prevent the hood from moving unexpectedly on enable.
    */
   public void syncHoodPosition() {
+    m_hood.stop();
     m_hood.syncToEncoder();
+  }
+
+  public void robotContainerZeroGyroWithAlliance(){
+    driveTrain.zeroGyroWithAlliance();
   }
  
   private void configureNamedCommands() {
@@ -149,8 +157,8 @@ public class RobotContainer
     );
     NamedCommands.registerCommand("LaunchPrep", new InstantCommand(() ->
       m_launcher.setVelocity(MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm))));
-    NamedCommands.registerCommand("ClimbExtend", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
-    NamedCommands.registerCommand("ClimbRetract", new InstantCommand(() -> m_climber.setHeight(0)));
+    //NamedCommands.registerCommand("ClimbExtend", new InstantCommand(() -> m_climber.setHeight(Constants.Climber.kMaxHeightInches)));
+    //NamedCommands.registerCommand("ClimbRetract", new InstantCommand(() -> m_climber.setHeight(0)));
     NamedCommands.registerCommand("AgitateFuel", new SmartAgitateCommand(m_fuelAgitator));
     NamedCommands.registerCommand("SpinIntake", new RunCommand(() ->
       m_intake.setVelocity(getTuningNumber(kIntakeRpmKey, kIntakeRpmDefault)), m_intake)
@@ -164,7 +172,16 @@ public class RobotContainer
 
       m_hood.setAngleFromPose(driveTrain.getPose().getTranslation(), hub.pos);
     }, m_hood));
-  }
+
+    NamedCommands.registerCommand("SpinUpAndFeed", new InstantCommand(() -> new AutoSpinUpAndFeedCommand(
+        m_launcher,
+        m_indexer,
+        m_fuelAgitator,
+        () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
+        () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
+        () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)
+      ).schedule()));
+      }
 
   /*
    private void configureNamedCommands() {
@@ -232,13 +249,14 @@ public class RobotContainer
         driveTrain.driveAndAim(driveAngularVelocity, depot));  
     
     // Driver: press START to zero/reset the gyro heading
-    driverController.start().onTrue(new InstantCommand(driveTrain::zeroGyro));
+    driverController.start().onTrue(new InstantCommand(driveTrain::zeroGyroWithAlliance));
 
     /* ******************************************************************
                   Operator Controls
     *********************************************************************/ 
+    /*
     m_climber.setDefaultCommand(new RunCommand(() -> {
-      double speed = MathUtil.applyDeadband(-operatorController.getLeftY(), OperatorConstants.LEFT_Y_DEADBAND);
+      double speed = MathUtil.applyDeadband(-operatorController.getRightY(), OperatorConstants.RIGHT_X_DEADBAND);
 
       if (m_climber.isAtBottom() && speed < 0) {
         speed = 0;
@@ -250,12 +268,12 @@ public class RobotContainer
 
       m_climber.runManual(speed);
     }, m_climber));
-
+    */
     // Intake deploy: manual control using operator right stick X (left/right).
     // Pushing right -> extend, left -> retract. Applies safety stops using
     // the DIO-mounted limit switches on the intake deploy subsystem.
     m_intakeDeploy.setDefaultCommand(new RunCommand(() -> {
-      double speed = MathUtil.applyDeadband(operatorController.getRightX(), OperatorConstants.RIGHT_X_DEADBAND);
+      double speed = MathUtil.applyDeadband(operatorController.getLeftX(), OperatorConstants.LEFT_Y_DEADBAND);
 
       // 1. Check for Retract Limit
       // We use the raw switch here as a backup to the encoder
@@ -332,7 +350,7 @@ public class RobotContainer
     //     .finallyDo(interrupted -> m_fuelAgitator.stop());
 
     // Bind the triggers to the reusable commands (hold-to-run)
-    operatorController.a().whileTrue(launcherHold).onFalse(new InstantCommand(m_launcher::stop,m_launcher));
+    //operatorController.a().whileTrue(launcherHold).onFalse(new InstantCommand(m_launcher::stop,m_launcher));
     operatorController.b().whileTrue(indexerHold).onFalse(new InstantCommand(m_indexer::stop,m_indexer));
     // operatorController.x() was originally bound to agitatorHold. Commenting out to repurpose X for intake percent testing.
     // operatorController.x().whileTrue(agitatorHold).onFalse(new InstantCommand(m_fuelAgitator::stop,m_fuelAgitator));
@@ -363,8 +381,8 @@ public class RobotContainer
         () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm)));
 
     // Operator: Auto-aim hood + spin up + feed (default hub)
-    /*
-    operatorController.rightTrigger().whileTrue(
+    
+    operatorController.a().whileTrue(
       new AutoAimSpinUpAndFeedCommand(
         m_launcher,
         m_indexer,
@@ -374,7 +392,7 @@ public class RobotContainer
         () -> getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault),
         () -> getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault),
         () -> getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault)));
-
+/*
     // Operator: Auto-aim hood + spin up + feed (hard-coded target at 2m,2m)
     operatorController.leftTrigger().whileTrue(
       new AutoAimSpinUpAndFeedCommand(
@@ -435,17 +453,17 @@ public class RobotContainer
    */
   public Command getAutonomousCommand() {
     // This creates a sequence that HOMES first, then runs the PathPlanner Auto
-      // return new SequentialCommandGroup(
-      //  //get homing sequence
-      // autoChooser.getSelected()
-      // );
-         return new SpinUpAndFeedCommand(
-        m_launcher,
-        m_indexer,
-        m_fuelAgitator,
-        () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
-        () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
-        () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm));
+       return new SequentialCommandGroup(
+        //get homing sequence
+       autoChooser.getSelected()
+       );
+        //  return new SpinUpAndFeedCommand(
+        // m_launcher,
+        // m_indexer,
+        // m_fuelAgitator,
+        // () -> MathUtil.clamp(getTuningNumber(kLauncherRpmKey, kLauncherRpmDefault), 0.0, Constants.Launcher.kMaxSafeRpm),
+        // () -> MathUtil.clamp(getTuningNumber(kIndexerRpmKey, kIndexerRpmDefault), 0.0, Constants.Indexer.kMaxSafeRpm),
+        // () -> MathUtil.clamp(getTuningNumber(kAgitatorRpmKey, kAgitatorRpmDefault), 0.0, Constants.Agitator.kMaxSafeRpm));
   }
 }
 

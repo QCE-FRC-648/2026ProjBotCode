@@ -39,6 +39,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
+import edu.wpi.first.wpilibj.smartdashboard.*;
 import frc.robot.Constants;
 
 import java.io.File;
@@ -583,10 +584,13 @@ public class SwerveSubsystem extends SubsystemBase
       zeroGyro();
       //Set the pose 180 degrees
       resetOdometry(new Pose2d(getPose().getTranslation(), Rotation2d.fromDegrees(180)));
+    SmartDashboard.putString("debug/alliance_zero", "zeroed with red alliance");
     } else
     {
       zeroGyro();
+    SmartDashboard.putString("debug/alliance_zero", "zeroed with blue alliance");
     }
+
   }
 
   /**

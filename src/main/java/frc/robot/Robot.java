@@ -4,12 +4,16 @@
 
 package frc.robot;
 
+import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+
+import com.revrobotics.util.StatusLogger;
+
 //adding the camera service
 import edu.wpi.first.cameraserver.CameraServer;
 
@@ -52,8 +56,13 @@ public class Robot extends TimedRobot
     // immediately when disabled, but then also let it be pushed more 
     disabledTimer = new Timer();
 
+    //Logging Disable for competition
+    StatusLogger.start();
+    DataLogManager.start();
+    DriverStation.startDataLog(DataLogManager.getLog());
+
     //start streaming the camera feed
-    //CameraServer.startAutomaticCapture();
+    CameraServer.startAutomaticCapture();
 
     if (isSimulation())
     {
@@ -109,9 +118,10 @@ public class Robot extends TimedRobot
     m_robotContainer.setMotorBrake(true);
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
+    m_robotContainer.robotContainerZeroGyroWithAlliance();
     // Sync hood position to current encoder reading to avoid unwanted motion on enable
     m_robotContainer.syncHoodPosition();
-
+  
     
 
     // schedule the autonomous command (example)

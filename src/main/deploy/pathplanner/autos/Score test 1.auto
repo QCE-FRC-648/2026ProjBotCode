@@ -7,13 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "Left - Pass the line"
-          }
-        },
-        {
-          "type": "named",
-          "data": {
-            "name": "SpinUpAndFeed"
+            "pathName": "Score Test"
           }
         }
       ]
