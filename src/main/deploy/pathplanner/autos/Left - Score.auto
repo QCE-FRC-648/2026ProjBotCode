@@ -19,6 +19,12 @@
         {
           "type": "named",
           "data": {
+            "name": "IntakeExtend"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
             "name": "SpinUpAndFeed"
           }
         }
