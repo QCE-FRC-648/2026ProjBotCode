@@ -57,9 +57,9 @@ public class Robot extends TimedRobot
     disabledTimer = new Timer();
 
     //Logging Disable for competition
-    StatusLogger.start();
-    DataLogManager.start();
-    DriverStation.startDataLog(DataLogManager.getLog());
+    //StatusLogger.start();
+    //DataLogManager.start();
+    //DriverStation.startDataLog(DataLogManager.getLog());
 
     //start streaming the camera feed
     CameraServer.startAutomaticCapture();
