@@ -46,7 +46,7 @@ public class IntakeDeploySubsystem extends SubsystemBase {
         // Set this to 'true' or 'false' based on which direction is "Forward" (Extension)
         // Once this is set, the encoder will automatically follow this direction.
         IntakeDeployMotor1Config
-            .idleMode(IdleMode.kBrake)
+            .idleMode(IdleMode.kCoast)
             .inverted(true) 
             .smartCurrentLimit(40);
 
@@ -63,7 +63,7 @@ public class IntakeDeploySubsystem extends SubsystemBase {
 */
         // 4. FOLLOWER
         IntakeDeployMotor2Config
-            .idleMode(IdleMode.kBrake)
+            .idleMode(IdleMode.kCoast)
             .follow(IntakeDeployMotor1, true); // Set 'true' if Motor 2 is physically mirrored
 
         // Apply Configurations
