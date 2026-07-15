@@ -1,0 +1,43 @@
+{
+  "version": "2025.0",
+  "command": {
+    "type": "sequential",
+    "data": {
+      "commands": [
+        {
+          "type": "path",
+          "data": {
+            "pathName": "test Center - Trench Line-up"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "IntakeExtend"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "test Center - Under Trench"
+          }
+        },
+        {
+          "type": "named",
+          "data": {
+            "name": "SpinUpAndFeed"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "Center - Load"
+          }
+        }
+      ]
+    }
+  },
+  "resetOdom": true,
+  "folder": null,
+  "choreoAuto": false
+}
