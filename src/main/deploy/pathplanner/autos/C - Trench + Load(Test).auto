@@ -7,7 +7,7 @@
         {
           "type": "path",
           "data": {
-            "pathName": "test Center - Trench Line-up"
+            "pathName": "Test Center - Trench Line-up"
           }
         },
         {
@@ -20,6 +20,12 @@
           "type": "path",
           "data": {
             "pathName": "test Center - Under Trench"
+          }
+        },
+        {
+          "type": "path",
+          "data": {
+            "pathName": "spin for load"
           }
         },
         {
