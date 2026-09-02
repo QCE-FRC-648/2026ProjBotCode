@@ -29,15 +29,22 @@
           }
         },
         {
-          "type": "named",
+          "type": "parallel",
           "data": {
-            "name": "SpinUpAndFeed"
-          }
-        },
-        {
-          "type": "path",
-          "data": {
-            "pathName": "Center - Load"
+            "commands": [
+              {
+                "type": "path",
+                "data": {
+                  "pathName": "Center - Load"
+                }
+              },
+              {
+                "type": "named",
+                "data": {
+                  "name": "SpinIntake"
+                }
+              }
+            ]
           }
         }
       ]
